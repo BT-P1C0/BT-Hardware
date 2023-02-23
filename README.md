@@ -1,7 +1,4 @@
-## [WIP] bt-Pico - GPS Tracker
-
-### TO DO:
-- Refactor
+## BT-P1C0 Tracker Hardware
 
 ![v2 image](/img/imagev2.jpg)
 GPS Tracker updates its location on the website [here](https://mg-lsj.github.io/Bus-Tracker/).
@@ -9,8 +6,10 @@ GPS Tracker updates its location on the website [here](https://mg-lsj.github.io/
 ### Components used:
 
 - Raspberry Pi Pico (Microcontroller): Controls other two modules
-- NEO-6M (GPS module): Gets current location
+- NEO-6M (GNSS module): Gets current location
 - SIM800L (GSM/GPRS module): Sends location to the website
+- InvenSense MPU9250 (IMU)
+- SSD1306 (OLED Display)
 
 ### Wiring Diagram
 
