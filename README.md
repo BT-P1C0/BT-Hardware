@@ -1,7 +1,7 @@
 ## BT-P1C0 Tracker Hardware
-
+The Tracker updates its location on the website [here]([https://mg-lsj.github.io/Bus-Tracker/](https://bt-p1c0.github.io/BT-Website/)).
 ![v2 image](/img/imagev2.jpg)
-GPS Tracker updates its location on the website [here](https://mg-lsj.github.io/Bus-Tracker/).
+
 
 ### Components used:
 
