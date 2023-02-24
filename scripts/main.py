@@ -7,6 +7,7 @@ from imu import MPU6050
 from ssd1306 import SSD1306_I2C
 import _thread
 
+oled_state, led_state, imu_state, sim_state, gps_state = 0, 0, 0, 0, 0
 # function definations
 
 
@@ -23,7 +24,8 @@ def ledBlink(times: int = 1, delay: int = 1):
 def display(
     text: str, x: int = 0, y: int = 0, color: int = 1, overflow: str = "wrap"
 ):  # overflow skip character = "eol : chop the line" or "wrap : wrap to next line"
-    global last_display, oled_state, oled
+    global last_display, oled_state, oled, crash
+
     try:
         print(text)
         if oled_state and last_display != text:
@@ -45,10 +47,11 @@ def display(
     except Exception as e:
         print("Display exception", e)
 
+
 # LED
 try:
-    led_state = 1
     picoLed = Pin(env.hardware.led.pin, Pin.OUT)
+    led_state = 1
     print("\nLED: OK")
     ledBlink(2, 0.1)
 except Exception as e:
@@ -60,8 +63,6 @@ except Exception as e:
 # OLED Screen
 last_display = ""
 try:
-
-    oled_state = 1
     oled = SSD1306_I2C(
         width=env.hardware.oled.resolution.width,  # 128
         height=env.hardware.oled.resolution.height,  # 32
@@ -72,6 +73,7 @@ try:
             freq=env.hardware.oled.pin.frequency,  # 200000
         ),
     )
+    oled_state = 1
     display("\nOLED: OK")
     ledBlink(2, 0.1)
 except Exception as e:
@@ -84,7 +86,6 @@ except Exception as e:
 # IMU
 crash = False
 try:
-    imu_state = 1
     imu = MPU6050(
         side_str=I2C(
             id=env.hardware.imu.pin.i2c,  # 0
@@ -93,6 +94,7 @@ try:
             freq=env.hardware.imu.pin.frequency,  # 400000
         ),
     )
+    imu_state = 1
     display("\nIMU: OK")
     ledBlink(2, 0.1)
 except Exception as e:
@@ -116,9 +118,11 @@ try:
         )
     )
     simModule.initialize()
+    sim_state = 1
     display("\nSIM: OK")
     ledBlink(2, 0.1)
 except Exception as e:
+    sim_state = 0
     display("\nSIM: ERROR")
     print(e)
     ledBlink(5, 0.1)
@@ -132,40 +136,66 @@ try:
         rx=Pin(env.hardware.gps.pin.rx),
     )
     gpsParserObject = NMEAparser()
+    gps_state = 1
     display("\nGPS: OK")
     ledBlink(2, 0.1)
 except Exception as e:
+    gps_state = 0
     display("\nGPS: ERROR")
     print(e)
     ledBlink(5, 0.1)
 
 
 def check_crash():
-    global crash, imu
-    while True:
-        try:
-            ax = round(imu.accel.x, 2)
-            ay = round(imu.accel.y, 2)
-            az = round(imu.accel.z, 2)
-            if ax >= 2 or ay >= 5 or az >= 5:
-                crash = (ax, ay, az)
+    global crash, imu, imu_state, display
+    if imu_state:
+        while True:
+            try:
+                ax = round(imu.accel.x, 2)
+                ay = round(imu.accel.y, 2)
+                az = round(imu.accel.z, 2)
+                if ax >= 2 or ay >= 5 or az >= 5:
+                    crash = (ax, ay, az)
+                    try:
+                        display("Crash Detected!!")
+                        picoLed.value(1)
+                        t = utime.ticks_ms()
+                        print("Trying to upload crash data...")
+                        response = simModule.http_request(
+                            crashUrl(
+                                lat,
+                                lng,
+                                utc,
+                            ),
+                            "GET",
+                        )
+                        display(
+                            f"Status Code: {response.status_code}\n\nTime Delta:\n{utime.ticks_diff(utime.ticks_ms(),t)/1000} s"
+                        )
+                        print("Response:", response.content)
+                        picoLed.value(0)
+                        break
+                    except Exception as e:
+                        print(e)
+                        break
+            except Exception as e:
+                print("IMU Error:", e)
                 break
-        except Exception as e:
-            print("IMU Error:", e)
-            pass
 
-        # Additional sensor data
-        # gx = round(imu.gyro.x)
-        # gy = round(imu.gyro.y)
-        # gz = round(imu.gyro.z)
-        # tem = round(imu.temperature, 2)
-        # print(f"A:{(ax,ay,az)}, G:{(gx,gy,gz)}, T:{tem}")
+            # Additional sensor data
+            # gx = round(imu.gyro.x)
+            # gy = round(imu.gyro.y)
+            # gz = round(imu.gyro.z)
+            # tem = round(imu.temperature, 2)
+            # print(f"A:{(ax,ay,az)}, G:{(gx,gy,gz)}, T:{tem}")
 
 
-_thread.start_new_thread(check_crash, ())
+if imu_state:
+    _thread.start_new_thread(check_crash, ())
 
 while True:
     try:
+        assert sim_state == 1
         simModule.connect(apn="airtelgprs.net")
         break
     except Exception as e:
@@ -179,7 +209,7 @@ lat = 0
 lng = 0
 utc = 0
 
-while True:
+while gps_state:
     if gpsModule.any():
         try:
             if staus := gpsParserObject.update((gpsModule.read(1)).decode("ASCII")):
@@ -226,25 +256,4 @@ while True:
         finally:
             picoLed.value(0)
     if crash:
-        try:
-            display("Crash Detected!!")
-            picoLed.value(1)
-            t = utime.ticks_ms()
-            print("Trying to upload crash data...")
-            response = simModule.http_request(
-                crashUrl(
-                    lat,
-                    lng,
-                    utc,
-                ),
-                "GET",
-            )
-            display(
-                f"Status Code: {response.status_code}\n\nTime Delta:\n{utime.ticks_diff(utime.ticks_ms(),t)/1000} s"
-            )
-            print("Response:", response.content)
-            picoLed.value(0)
-            break
-        except Exception as e:
-            print(e)
-            break
+        break
