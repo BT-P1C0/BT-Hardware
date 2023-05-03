@@ -4,15 +4,16 @@
         "sk": "sub-c-10e0e350-30c8-4f8c-84dc-659f6954424e"
     },
     "id": {
-        "uuid": "pico-mark-4",
-        "busNo": "D"
+        "uuid": "pico-mark-5",
+        "busNo": "H"
     },
     "hardware": {
         "gps": {
             "pin": {
                 "uart": 0,
                 "tx": 0,
-                "rx": 1
+                "rx": 1,
+                "baudrate": 9600
             }
         },
         "sim": {
