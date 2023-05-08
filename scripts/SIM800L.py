@@ -1,3 +1,8 @@
+"""
+Modified SIM800L Driver 
+Original File: https://github.com/pythings/Drivers/blob/master/SIM800L.py
+"""
+
 # Imports
 import time
 import json
@@ -14,10 +19,9 @@ class Response(object):
 
 
 class Modem(object):
-    def __init__(
-        self,
-        uart=None,
-    ):
+    def __init__(self, uart=None, MODEM_RST_PIN=None):
+        # Reset pin
+        self.MODEM_RST_PIN = MODEM_RST_PIN
 
         # Uart
         self.uart = uart
@@ -30,6 +34,18 @@ class Modem(object):
     # ----------------------
 
     def initialize(self):
+        if not self.uart:
+            from machine import Pin
+
+            # Pin initialization
+            MODEM_RST_PIN_OBJ = (
+                Pin(self.MODEM_RST_PIN, Pin.OUT) if self.MODEM_RST_PIN else None
+            )
+
+            # Setup reset pin
+            if MODEM_RST_PIN_OBJ:
+                print("Set pin high")
+                MODEM_RST_PIN_OBJ.high()
 
         # Test AT commands
         retries = 0
@@ -54,79 +70,78 @@ class Modem(object):
     # ----------------------
     # Execute AT commands
     # ----------------------
-    def execute_at_command(self, command, data=None, clean_output=True):
 
+    def execute_at_command(self, command, data=None, clean_output=True):
         # Commands dictionary. Not the best approach ever, but works nicely.
         commands = {
-            "modeminfo": {"string": "ATI", "timeout": 3, "end": "OK"},
+            "modeminfo": {"string": "ATI", "timeout": 10, "end": "OK"},
             "fwrevision": {"string": "AT+CGMR", "timeout": 3, "end": "OK"},
             "battery": {"string": "AT+CBC", "timeout": 3, "end": "OK"},
-            "scan": {"string": "AT+COPS=?", "timeout": 3, "end": "OK"},
+            "scan": {"string": "AT+COPS=?", "timeout": 60, "end": "OK"},
             "network": {"string": "AT+COPS?", "timeout": 3, "end": "OK"},
             "signal": {"string": "AT+CSQ", "timeout": 3, "end": "OK"},
             "checkreg": {"string": "AT+CREG?", "timeout": 3, "end": None},
             "setapn": {
-                "string": f'AT+SAPBR=3,1,"APN","{data}"',
+                "string": 'AT+SAPBR=3,1,"APN","{}"'.format(data),
                 "timeout": 3,
                 "end": "OK",
             },
             "setuser": {
-                "string": f'AT+SAPBR=3,1,"USER","{data}"',
+                "string": 'AT+SAPBR=3,1,"USER","{}"'.format(data),
                 "timeout": 3,
                 "end": "OK",
             },
             "setpwd": {
-                "string": f'AT+SAPBR=3,1,"PWD","{data}"',
+                "string": 'AT+SAPBR=3,1,"PWD","{}"'.format(data),
                 "timeout": 3,
                 "end": "OK",
             },
+            # Appeared on hologram net here or below
             "initgprs": {
                 "string": 'AT+SAPBR=3,1,"Contype","GPRS"',
                 "timeout": 3,
                 "end": "OK",
-            },  # Appeared on hologram net here or below
-            "opengprs": {"string": "AT+SAPBR=1,1", "timeout": 5, "end": "OK"},
-            "getbear": {"string": "AT+SAPBR=2,1", "timeout": 3, "end": "OK"},
+            },
+            "opengprs": {"string": "AT+SAPBR=1,1", "timeout": 3, "end": "OK"},
+            "getbear": {"string": "AT+SAPBR=2,1", "timeout": 30, "end": "OK"},
             "inithttp": {"string": "AT+HTTPINIT", "timeout": 3, "end": "OK"},
             "sethttp": {"string": 'AT+HTTPPARA="CID",1', "timeout": 3, "end": "OK"},
             "checkssl": {"string": "AT+CIPSSL=?", "timeout": 3, "end": "OK"},
             "enablessl": {"string": "AT+HTTPSSL=1", "timeout": 3, "end": "OK"},
             "disablessl": {"string": "AT+HTTPSSL=0", "timeout": 3, "end": "OK"},
             "initurl": {
-                "string": f'AT+HTTPPARA="URL","{data}"',
+                "string": 'AT+HTTPPARA="URL","{}"'.format(data),
                 "timeout": 3,
                 "end": "OK",
             },
             "doget": {"string": "AT+HTTPACTION=0", "timeout": 30, "end": "+HTTPACTION"},
             "setcontent": {
-                "string": f'AT+HTTPPARA="CONTENT","{data}"',
+                "string": 'AT+HTTPPARA="CONTENT","{}"'.format(data),
                 "timeout": 3,
                 "end": "OK",
             },
-            "setuserdata": {
-                "string": f'AT+HTTPPARA="USERDATA","{data}"',
-                "timeout": 3,
-                "end": "OK",
-            },
+            # "data" is data_lenght in this context, while 5000 is the timeout
             "postlen": {
-                "string": f"AT+HTTPDATA={data},5000",
+                "string": "AT+HTTPDATA={},5000".format(data),
                 "timeout": 3,
                 "end": "DOWNLOAD",
-            },  # "data" is data_lenght in this context, while 5000 is the timeout
-            "dumpdata": {"string": data, "timeout": 1, "end": "OK"},
-            "dopost": {
-                "string": "AT+HTTPACTION=1",
-                "timeout": 30,
-                "end": "+HTTPACTION",
             },
-            "getdata": {"string": "AT+HTTPREAD", "timeout": 3, "end": "OK"},
+            "dumpdata": {"string": data, "timeout": 1, "end": "OK"},
+            "dopost": {"string": "AT+HTTPACTION=1", "timeout": 3, "end": "+HTTPACTION"},
+            "getdata": {"string": "AT+HTTPREAD", "timeout": 30, "end": "OK"},
             "closehttp": {"string": "AT+HTTPTERM", "timeout": 3, "end": "OK"},
             "closebear": {"string": "AT+SAPBR=0,1", "timeout": 3, "end": "OK"},
         }
 
+        # References:
+        # https://github.com/olablt/micropython-sim800/blob/4d181f0c5d678143801d191fdd8a60996211ef03/app_sim.py
+        # https://arduino.stackexchange.com/questions/23878/what-is-the-proper-way-to-send-data-through-http-using-sim908
+        # https://stackoverflow.com/questions/35781962/post-api-rest-with-at-commands-sim800
+        # https://arduino.stackexchange.com/questions/34901/http-post-request-in-json-format-using-sim900-module (full post example)
+
         # Sanity checks
         if command not in commands:
-            raise Exception(f'Unknown command "{command}"')
+            raise Exception('Unknown command "{}"'.format(command))
 
         # Support vars
         command_string = commands[command]["string"]
@@ -135,7 +150,7 @@ class Modem(object):
         processed_lines = 0
 
         # Execute the AT command
-        command_string_for_at = f"{command_string}\r\n"
+        command_string_for_at = "{}\r\n".format(command_string)
         self.uart.write(command_string_for_at)
 
         # Support vars
@@ -144,49 +159,43 @@ class Modem(object):
         empty_reads = 0
 
         while True:
-
             line = self.uart.readline()
             if not line:
                 time.sleep(1)
                 empty_reads += 1
                 if empty_reads > timeout:
                     raise Exception(
-                        f'Timeout for command "{command}" (timeout={timeout})'
+                        'Timeout for command "{}" (timeout={})'.format(command, timeout)
                     )
-                    # logger.warning('Timeout for command "{}" (timeout={})'.format(command, timeout))
-                    # break
             else:
-                try:
-                    # Convert line to string
-                    line_str = line.decode("utf-8")
+                # Convert line to string
+                line_str = line.decode("utf-8")
 
-                    # Do we have an error?
-                    if line_str == "ERROR\r\n":
-                        raise GenericATError("Got generic AT error")
+                # Do we have an error?
+                if line_str == "ERROR\r\n":
+                    raise GenericATError("Got generic AT error")
 
-                    # If we had a pre-end, do we have the expected end?
-                    if line_str == f"{excpected_end}\r\n":
-                        break
-                    if pre_end and line_str.startswith(f"{excpected_end}"):
-                        output += line_str
-                        break
+                # If we had a pre-end, do we have the expected end?
+                if line_str == "{}\r\n".format(excpected_end):
+                    break
+                if pre_end and line_str.startswith("{}".format(excpected_end)):
+                    output += line_str
+                    break
 
-                    # Do we have a pre-end?
-                    if line_str == "\r\n":
-                        pre_end = True
-                    else:
-                        pre_end = False
+                # Do we have a pre-end?
+                if line_str == "\r\n":
+                    pre_end = True
+                else:
+                    pre_end = False
 
-                    # Keep track of processed lines and stop if exceeded
-                    processed_lines += 1
+                # Keep track of processed lines and stop if exceeded
+                processed_lines += 1
 
-                    # Save this line unless in particular conditions
-                    if command == "getdata" and line_str.startswith("+HTTPREAD:"):
-                        pass
-                    else:
-                        output += line_str
-                except:
-                    return line
+                # Save this line unless in particular conditions
+                if command == "getdata" and line_str.startswith("+HTTPREAD:"):
+                    pass
+                else:
+                    output += line_str
 
         # Remove the command string from the output
         output = output.replace(command_string + "\r\r\n", "")
@@ -217,7 +226,21 @@ class Modem(object):
 
     def battery_status(self):
         output = self.execute_at_command("battery")
-        return output
+        battChargeStatus, battLevel, battVoltage = output.split(":")[1].split(",")
+        # Map values to battery charge state
+        if int(battChargeStatus) == 0:
+            battChargeStatus = "Not charging"
+        elif int(battChargeStatus) == 1:
+            battChargeStatus = "Charging"
+        elif int(battChargeStatus) == 2:
+            battChargeStatus = "Finished charging"
+        else:
+            battChargeStatus = "Power fault"
+
+        # More conversions
+        battLevel = f"{battLevel}%"
+        battVoltage = f"{int(battVoltage)/1000}V"
+        return battChargeStatus, battLevel, battVoltage
 
     def scan_networks(self):
         networks = []
@@ -253,19 +276,34 @@ class Modem(object):
         # See more at https://m2msupport.net/m2msupport/atcsq-signal-quality/
         output = self.execute_at_command("signal")
         signal = int(output.split(":")[1].split(",")[0])
-        signal_ratio = float(signal) / float(
-            30
-        )  # 30 is the maximum value (2 is the minimum)
-        return signal_ratio
+        # 30 is the maximum value (2 is the minimum)
+        signal_ratio = float(signal) * 100 / float(30) if signal != 99 else 99
+        rxQual = int(output.split(":")[1].split(",")[1])  # Channel bit error rate
+        # RxQual to BER conversion
+        if rxQual == 0:
+            ber = "BER < 0.2%"
+        elif rxQual == 1:
+            ber = "0.2% < BER < 0.4%"
+        elif rxQual == 2:
+            ber = "0.4% < BER < 0.8%"
+        elif rxQual == 3:
+            ber = "0.8% < BER < 1.6%"
+        elif rxQual == 4:
+            ber = "1.6% < BER < 3.2%"
+        elif rxQual == 5:
+            ber = "3.2% < BER < 6.4%"
+        elif rxQual == 6:
+            ber = "6.4% < BER < 12.8%"
+        elif rxQual == 7:
+            ber = "12.8% < BER"
+        else:
+            ber = f"99"
+        return signal_ratio, ber
 
     def get_ip_addr(self):
         output = self.execute_at_command("getbear")
-        if output.startswith("ERROR"):
-            raise Exception("Error")
-
-        output = output.split("+")[
-            -1
-        ]  # Remove potential leftovers in the buffer before the "+SAPBR:" response
+        # Remove potential leftovers in the buffer before the "+SAPBR:" response
+        output = output.split("+")[-1]
         pieces = output.split(",")
         if len(pieces) != 3:
             raise Exception('Cannot parse "{}" to get an IP address'.format(output))
@@ -295,8 +333,8 @@ class Modem(object):
 
         # Second, set the APN
         self.execute_at_command("setapn", apn)
-        # self.execute_at_command("setuser", user)
-        # self.execute_at_command("setpwd", pwd)
+        self.execute_at_command("setuser", user)
+        self.execute_at_command("setpwd", pwd)
 
         # Then, open the GPRS connection.
         self.execute_at_command("opengprs")
@@ -318,7 +356,6 @@ class Modem(object):
                 break
 
     def disconnect(self):
-
         # Close bearer
         try:
             self.execute_at_command("closebear")
@@ -335,7 +372,6 @@ class Modem(object):
             )
 
     def http_request(self, url, mode="GET", data=None, content_type="application/json"):
-
         # Protocol check.
         assert url.startswith(
             "http"
@@ -371,17 +407,10 @@ class Modem(object):
         self.execute_at_command("initurl", data=url)
 
         if mode == "GET":
-
             output = self.execute_at_command("doget")
             response_status_code = output.split(",")[1]
 
         elif mode == "POST":
-
-            self.execute_at_command(
-                "setuserdata",
-                "Authorization:Basic cWNnRW9RLnlLZDBtUTpXcm1Rc2ZJOC1OYVhwTWVCTzVXZTA5NG1fN2paTTN3b1UxWXMtQUVmUDdn",
-            )
-
             self.execute_at_command("setcontent", content_type)
 
             self.execute_at_command("postlen", len(data))
@@ -392,7 +421,7 @@ class Modem(object):
             response_status_code = output.split(",")[1]
 
         else:
-            raise Exception(f'Unknown mode "{mode}"')
+            raise Exception('Unknown mode "{}'.format(mode))
 
         # Third, get data
         response_content = self.execute_at_command("getdata", clean_output=False)
@@ -401,7 +430,3 @@ class Modem(object):
         self.execute_at_command("closehttp")
 
         return Response(status_code=response_status_code, content=response_content)
-
-
-if __name__ == "__main__":
-    pass

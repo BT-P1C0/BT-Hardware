@@ -373,6 +373,7 @@ class MPU6050(object):
         self._gyro._ivector[1] = bytes_toint(self.buf6[2], self.buf6[3])
         self._gyro._ivector[2] = bytes_toint(self.buf6[4], self.buf6[5])
 
+
 # imu.py MicroPython driver for the InvenSense inertial measurement units
 # This is the base class
 # Adapted from Sebastian Plamauer's MPU9150 driver:
