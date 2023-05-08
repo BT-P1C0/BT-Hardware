@@ -2,9 +2,10 @@
 
 The Tracker updates its location on the website [here](<[https://mg-lsj.github.io/Bus-Tracker/](https://bt-p1c0.github.io/BT-Website/)>).
 
-### Image v3
+### Image v6
 
-![v3 image](/img/image_v3.jpg)
+![v6a image](/img/v6a.png)
+![v6b image](/img/v6b.png)
 
 ### Components used:
 
