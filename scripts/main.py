@@ -7,15 +7,28 @@ from imu import MPU6050
 from ssd1306 import SSD1306_I2C
 import _thread
 
+
 class BusTracker(object):
     def __init__(self):
         self.env = env
         # Hardware Connection Status
-        self.oled_state, self.led_state, self.imu_state, self.sim_state, self.gps_state = 0, 0, 0, 0, 0 
-        self.oled, self.picoLed, self.imu, self.simModule, self.gpsModule = None, None, None, None, None
-        self.last_display, self.httpUrl = "",""
+        (
+            self.oled_state,
+            self.led_state,
+            self.imu_state,
+            self.sim_state,
+            self.gps_state,
+        ) = (0, 0, 0, 0, 0)
+        self.oled, self.picoLed, self.imu, self.simModule, self.gpsModule = (
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        self.last_display, self.httpUrl = "", ""
         self.lat, self.lng, self.utc = 0, 0, 0
-        
+
         # Pico LED
         try:
             self.picoLed = Pin(env.hardware.led.pin, Pin.OUT)
@@ -90,7 +103,7 @@ class BusTracker(object):
             self.display("\nSIM: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
-        
+
         # GPS Module
         try:
             self.gpsModule = UART(
@@ -119,19 +132,30 @@ class BusTracker(object):
                 self.display("\nUnable to connect to internet, retrying...")
                 print(e)
 
-        self.display(f"\nIP address: \n\n{self.simModule.get_ip_addr()}")
+        RSSI, BER = self.simModule.get_signal_strength()
+        battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
+
+        self.display(
+            f"IP: {self.simModule.get_ip_addr()}\nRSSI: {RSSI}%\nBatt Level:{battLevel}"
+        )
+        # 99 is "not know or not detectable"
+        print(
+            f"RSSI: {RSSI}%, BER: {BER}, Battery: {battChargeStatus}, Level: {battLevel}, Voltage: {battVoltage}"
+        )
         self.ledBlink(3, 0.3)
 
     def ledBlink(self, times: int = 1, delay: int = 1):
         if self.led_state:
-            self.picoLed.value(0) # turn off led if open
+            self.picoLed.value(0)  # turn off led if open
             for _ in range(times * 2 - 1):
                 self.picoLed.toggle()
                 utime.sleep(delay)
-            self.picoLed.value(0) # turn off led if somehow left on
-    
+            self.picoLed.value(0)  # turn off led if somehow left on
+
     # overflow behaviour = "eol : chop the sentance" or "wrap : wrap to next line"
-    def display(self, text: str, x: int = 0, y: int = 0, color: int = 1, overflow: str = "wrap"): 
+    def display(
+        self, text: str, x: int = 0, y: int = 0, color: int = 1, overflow: str = "wrap"
+    ):
         try:
             print(text)
             if self.oled_state and self.last_display != text:
@@ -163,17 +187,20 @@ class BusTracker(object):
                 if self.httpUrl:
                     currRequestUrl = self.httpUrl
                     if currRequestUrl != lastRequestUrl:
-                            self.display(f"\nSending HTTP Request")
-                            self.picoLed.value(1)
-                            t = utime.ticks_ms()
-                            response = self.simModule.http_request(mode="GET", url=currRequestUrl)
-                            self.picoLed.value(0)
-                            self.display(
-                                f"Status Code: {response.status_code}\n\nTime Delta:\n{utime.ticks_diff(utime.ticks_ms(),t)/1000} s"
-                            )
-                            print("Response:", response.content)
-                            lastRequestUrl = currRequestUrl
-            
+                        self.display(f"\nSending Location")
+                        print("Url =", currRequestUrl)
+                        self.picoLed.value(1)
+                        t = utime.ticks_ms()
+                        response = self.simModule.http_request(
+                            mode="GET", url=currRequestUrl
+                        )
+                        self.picoLed.value(0)
+                        self.display(
+                            f"Status Code: {response.status_code}\nTime Delta:\n{utime.ticks_diff(utime.ticks_ms(),t)/1000} s"
+                        )
+                        print("Response:", response.content)
+                        lastRequestUrl = currRequestUrl
+
             except Exception as e:
                 print("Networking Exception", e)
 
@@ -182,23 +209,29 @@ class BusTracker(object):
         while self.gps_state:
             if self.gpsModule.any():
                 try:
-                    if self.gpsParserObject.update((self.gpsModule.read(1)).decode("ASCII")):
-                        self.lat = self.gpsParserObject.lat
-                        self.lng = self.gpsParserObject.lng
-                        self.utc = self.gpsParserObject.utc_time
-                        self.httpUrl = httpGetUrl(
-                            self.lat,
-                            self.lng,
-                            self.utc,
-                        )
-                    else:
-                        self.display("\nNo Gps Singal")
+                    if self.gpsParserObject.update(
+                        (self.gpsModule.read(1)).decode("ASCII")
+                    ):
+                        if (
+                            self.gpsParserObject.utc_time
+                            and self.gpsParserObject.lat
+                            and self.gpsParserObject.lng
+                        ):
+                            self.lat = self.gpsParserObject.lat
+                            self.lng = self.gpsParserObject.lng
+                            self.utc = self.gpsParserObject.utc_time
+                            self.httpUrl = httpGetUrl(
+                                self.lat,
+                                self.lng,
+                                self.utc,
+                            )
                 except Exception as e:
-                    print("GPS Exception", e) 
+                    print("GPS Exception", e)
 
     def start(self):
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
+
 
 if __name__ == "__main__":
     tracker = BusTracker()
