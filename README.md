@@ -55,4 +55,4 @@ Now, run `test_connections.py` to check connections.
 ![](/img/renders/a4.png)
 ![](/img/renders/b.png)
 ![](/img/renders/b1.png)
-![](/img/renders/b2.png)
+![](/img/renders/b4.png)
