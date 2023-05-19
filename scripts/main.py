@@ -229,6 +229,7 @@ class BusTracker(object):
                     print("GPS Exception", e)
 
     def start(self):
+        self.simModule.http_init()
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
 

@@ -1,6 +1,7 @@
 """
 Modified SIM800L Driver 
 Original File: https://github.com/pythings/Drivers/blob/master/SIM800L.py
+Used under Apache License 2.0
 """
 
 # Imports
@@ -371,39 +372,31 @@ class Modem(object):
                 )
             )
 
-    def http_request(self, url, mode="GET", data=None, content_type="application/json"):
-        # Protocol check.
-        assert url.startswith(
-            "http"
-        ), 'Unable to handle communication protocol for URL "{}"'.format(url)
+    def http_init(self):
+        self.execute_at_command("inithttp")
+        self.execute_at_command("sethttp")
 
+    def http_close(self):
+        self.execute_at_command("closehttp")
+
+    def http_request(self, url, mode="GET", data=None, content_type="application/json"):
         # Are we  connected?
         if not self.get_ip_addr():
             raise Exception("Error, modem is not connected")
 
-        # Close the http context if left open somehow
-        try:
-            self.execute_at_command("closehttp")
-        except GenericATError:
-            pass
+        # # Do we have to enable ssl as well?
+        # if self.ssl_available:
+        #     if url.startswith("https://"):
+        #         self.execute_at_command("enablessl")
+        #     elif url.startswith("http://"):
+        #         self.execute_at_command("disablessl")
+        # else:
+        #     if url.startswith("https://"):
+        #         raise NotImplementedError(
+        #             "SSL is only supported by firmware revisions >= R14.00"
+        #        )
 
-        # First, init and set http
-        self.execute_at_command("inithttp")
-        self.execute_at_command("sethttp")
-
-        # Do we have to enable ssl as well?
-        if self.ssl_available:
-            if url.startswith("https://"):
-                self.execute_at_command("enablessl")
-            elif url.startswith("http://"):
-                self.execute_at_command("disablessl")
-        else:
-            if url.startswith("https://"):
-                raise NotImplementedError(
-                    "SSL is only supported by firmware revisions >= R14.00"
-                )
-
-        # Second, init and execute the request
+        # init and execute the request
         self.execute_at_command("initurl", data=url)
 
         if mode == "GET":
@@ -425,8 +418,5 @@ class Modem(object):
 
         # Third, get data
         response_content = self.execute_at_command("getdata", clean_output=False)
-
-        # Then, close the http context
-        self.execute_at_command("closehttp")
 
         return Response(status_code=response_status_code, content=response_content)

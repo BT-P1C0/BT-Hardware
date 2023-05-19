@@ -1,3 +1,9 @@
+"""
+Modified microGPS
+Original File: https://github.com/inmcm/micropyGPS/blob/master/micropyGPS.py
+Used under MIT License
+"""
+
 try:
     import utime
 except ImportError:
@@ -13,7 +19,6 @@ class NMEAparser(object):
     __HEMISPHERES = ("N", "S", "E", "W")
 
     def __init__(self):
-
         #####################
         # Object Status Flags
         self.sentence_active = False
@@ -55,7 +60,6 @@ class NMEAparser(object):
 
         # Check Receiver Data Valid Flag
         if self.gps_segments[2] == "A":  # Data from Receiver is Valid/Has Fix
-
             # Longitude / Latitude
             try:
                 # Latitude
@@ -104,7 +108,6 @@ class NMEAparser(object):
 
         # Check Receiver Data Valid Flag
         if self.gps_segments[6] == "A":  # Data from Receiver is Valid/Has Fix
-
             # Longitude / Latitude
             try:
                 # Latitude
@@ -142,7 +145,8 @@ class NMEAparser(object):
 
     def gpgga(self):
         """Parse Global Positioning System Fix Data (GGA) Sentence. Updates UTC timestamp, latitude, longitude,
-        fix status, satellites in use, Horizontal Dilution of Precision (HDOP), altitude, geoid height and fix status"""
+        fix status, satellites in use, Horizontal Dilution of Precision (HDOP), altitude, geoid height and fix status
+        """
 
         # UTC Timestamp
         try:
@@ -216,7 +220,6 @@ class NMEAparser(object):
                 return None
 
             elif self.sentence_active:
-
                 # Check if sentence is ending (*)
                 if new_char == "*":
                     self.process_crc = False
@@ -236,7 +239,6 @@ class NMEAparser(object):
 
                     # When CRC input is disabled, sentence is nearly complete
                     if not self.process_crc:
-
                         if len(self.gps_segments[self.active_segment]) == 2:
                             try:
                                 final_crc = int(
@@ -259,10 +261,8 @@ class NMEAparser(object):
                     self.sentence_active = False  # Clear Active Processing Flag
 
                     if self.gps_segments[0] in self.supported_sentences:
-
                         # parse the Sentence Based on the message type, return True if parse is clean
                         if self.supported_sentences[self.gps_segments[0]](self):
-
                             # Let host know that the GPS object was updated by returning parsed sentence type
                             self.parsed_sentences += 1
                             return self.gps_segments[0]
