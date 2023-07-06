@@ -9,16 +9,9 @@ import _thread
 
 
 class BusTracker(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.env = env
         # Hardware Connection Status
-        (
-            self.oled_state,
-            self.led_state,
-            self.imu_state,
-            self.sim_state,
-            self.gps_state,
-        ) = (0, 0, 0, 0, 0)
         self.oled, self.picoLed, self.imu, self.simModule, self.gpsModule = (
             None,
             None,
@@ -30,27 +23,20 @@ class BusTracker(object):
         self.lat, self.lng, self.utc = 0, 0, 0
 
         # Pico LED
-        self.connectLED()
+        self.led_state = self.connectLED()
         # OLED Screen
-        self.connectOLED()
+        self.oled_state = self.connectOLED()
         # IMU
-        self.connectIMU()
+        self.imu_state = self.connectIMU()
         # SIM reset pin pulled high
         self.simModuleRST = Pin(self.env.hardware.sim.pin.rst, Pin.OUT)
         self.simModuleRST.high()
         # SIM Module
-        self.connectSIMmodule()
+        self.sim_state = self.connectSIMmodule()
         # GPS Module
-        self.connectGPSmodule()
+        self.gps_state = self.connectGPSmodule()
         # Connect to internet
-        while True:
-            try:
-                assert self.sim_state == 1
-                self.simModule.connect(apn="airtelgprs.net")
-                break
-            except Exception as e:
-                self.display("\nUnable to connect to internet, retrying...")
-                print(e)
+        self.connectToInternet()
 
         RSSI, BER = self.simModule.get_signal_strength()
         battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
@@ -64,18 +50,18 @@ class BusTracker(object):
         )
         self.ledBlink(3, 0.3)
 
-    def connectLED(self) -> None:
+    def connectLED(self) -> bool:
         try:
             self.picoLed = Pin(env.hardware.led.pin, Pin.OUT)
-            self.led_state = 1
             print("\nLED: OK")
-            self.ledBlink(2, 0.1)
+            return True
         except Exception as e:
-            self.led_state = 0
+            self.picoLed = None
             print("\nLED: ERROR")
             print(e)
+            return False
 
-    def connectOLED(self) -> None:
+    def connectOLED(self) -> bool:
         try:
             self.oled = SSD1306_I2C(
                 width=self.env.hardware.oled.resolution.width,  # 128
@@ -87,16 +73,17 @@ class BusTracker(object):
                     freq=self.env.hardware.oled.pin.frequency,  # 200000
                 ),
             )
-            self.oled_state = 1
+
             self.display("\nOLED: OK")
             self.ledBlink(2, 0.1)
+            return True
         except Exception as e:
-            self.oled_state = 0
             print("\nOLED: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
+            return False
 
-    def connectIMU(self) -> None:
+    def connectIMU(self) -> bool:
         try:
             self.imu = MPU6050(
                 side_str=I2C(
@@ -106,16 +93,16 @@ class BusTracker(object):
                     freq=self.env.hardware.imu.pin.frequency,  # 400000
                 ),
             )
-            self.imu_state = 1
             self.display("\nIMU: OK")
             self.ledBlink(2, 0.1)
+            return True
         except Exception as e:
-            self.imu_state = 0
             self.display("\nIMU: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
+            return False
 
-    def connectSIMmodule(self) -> None:
+    def connectSIMmodule(self) -> bool:
         try:
             self.simModule = Modem(
                 uart=UART(
@@ -126,16 +113,16 @@ class BusTracker(object):
                 ),
             )
             self.simModule.initialize()
-            self.sim_state = 1
             self.display("\nSIM: OK")
             self.ledBlink(2, 0.1)
+            return True
         except Exception as e:
-            self.sim_state = 0
             self.display("\nSIM: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
+            return False
 
-    def connectGPSmodule(self) -> None:
+    def connectGPSmodule(self) -> bool:
         try:
             self.gpsModule = UART(
                 self.env.hardware.gps.pin.uart,  # 1
@@ -144,14 +131,27 @@ class BusTracker(object):
                 rx=Pin(self.env.hardware.gps.pin.rx),  # 5
             )
             self.gpsParserObject = NMEAparser()
-            self.gps_state = 1
             self.display("\nGPS: OK")
             self.ledBlink(2, 0.1)
+            return True
         except Exception as e:
-            self.gps_state = 0
             self.display("\nGPS: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
+            return False
+
+    def connectToInternet(self) -> None:
+        self.display(
+            "\nConnecting to internet...",
+        )
+        while True:
+            try:
+                assert self.sim_state == 1
+                self.simModule.connect(apn="airtelgprs.net")
+                break
+            except Exception as e:
+                self.display("\nUnable to connect to internet, retrying...")
+                print(e)
 
     def ledBlink(self, times: int = 1, delay: int = 1) -> None:
         if self.led_state:
