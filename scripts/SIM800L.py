@@ -380,23 +380,9 @@ class Modem(object):
         self.execute_at_command("closehttp")
 
     def http_request(self, url, mode="GET", data=None, content_type="application/json"):
-        # Are we  connected?
         if not self.get_ip_addr():
             raise Exception("Error, modem is not connected")
 
-        # # Do we have to enable ssl as well?
-        # if self.ssl_available:
-        #     if url.startswith("https://"):
-        #         self.execute_at_command("enablessl")
-        #     elif url.startswith("http://"):
-        #         self.execute_at_command("disablessl")
-        # else:
-        #     if url.startswith("https://"):
-        #         raise NotImplementedError(
-        #             "SSL is only supported by firmware revisions >= R14.00"
-        #        )
-
-        # init and execute the request
         self.execute_at_command("initurl", data=url)
 
         if mode == "GET":

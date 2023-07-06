@@ -30,98 +30,18 @@ class BusTracker(object):
         self.lat, self.lng, self.utc = 0, 0, 0
 
         # Pico LED
-        try:
-            self.picoLed = Pin(env.hardware.led.pin, Pin.OUT)
-            self.led_state = 1
-            print("\nLED: OK")
-            self.ledBlink(2, 0.1)
-        except Exception as e:
-            self.led_state = 0
-            print("\nLED: ERROR")
-            print(e)
-
+        self.connectLED()
         # OLED Screen
-        try:
-            self.oled = SSD1306_I2C(
-                width=self.env.hardware.oled.resolution.width,  # 128
-                height=self.env.hardware.oled.resolution.height,  # 32
-                i2c=I2C(
-                    id=self.env.hardware.oled.pin.i2c,  # 1
-                    scl=Pin(self.env.hardware.oled.pin.scl),  # 15
-                    sda=Pin(self.env.hardware.oled.pin.sda),  # 14
-                    freq=self.env.hardware.oled.pin.frequency,  # 200000
-                ),
-            )
-            self.oled_state = 1
-            self.display("\nOLED: OK")
-            self.ledBlink(2, 0.1)
-        except Exception as e:
-            self.oled_state = 0
-            print("\nOLED: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
-
+        self.connectOLED()
         # IMU
-        try:
-            self.imu = MPU6050(
-                side_str=I2C(
-                    id=self.env.hardware.imu.pin.i2c,  # 0
-                    scl=Pin(self.env.hardware.imu.pin.scl),  # 17
-                    sda=Pin(self.env.hardware.imu.pin.sda),  # 14
-                    freq=self.env.hardware.imu.pin.frequency,  # 400000
-                ),
-            )
-            self.imu_state = 1
-            self.display("\nIMU: OK")
-            self.ledBlink(2, 0.1)
-        except Exception as e:
-            self.imu_state = 0
-            self.display("\nIMU: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
-
+        self.connectIMU()
         # SIM reset pin pulled high
         self.simModuleRST = Pin(self.env.hardware.sim.pin.rst, Pin.OUT)
         self.simModuleRST.high()
-
         # SIM Module
-        try:
-            self.simModule = Modem(
-                uart=UART(
-                    self.env.hardware.sim.pin.uart,  # 0
-                    baudrate=self.env.hardware.sim.pin.baudrate,  # 9600
-                    tx=Pin(self.env.hardware.sim.pin.tx),  # 0
-                    rx=Pin(self.env.hardware.sim.pin.rx),  # 1
-                ),
-            )
-            self.simModule.initialize()
-            self.sim_state = 1
-            self.display("\nSIM: OK")
-            self.ledBlink(2, 0.1)
-        except Exception as e:
-            self.sim_state = 0
-            self.display("\nSIM: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
-
+        self.connectSIMmodule()
         # GPS Module
-        try:
-            self.gpsModule = UART(
-                self.env.hardware.gps.pin.uart,  # 1
-                baudrate=self.env.hardware.gps.pin.baudrate,  # 9600
-                tx=Pin(self.env.hardware.gps.pin.tx),  # 4
-                rx=Pin(self.env.hardware.gps.pin.rx),  # 5
-            )
-            self.gpsParserObject = NMEAparser()
-            self.gps_state = 1
-            self.display("\nGPS: OK")
-            self.ledBlink(2, 0.1)
-        except Exception as e:
-            self.gps_state = 0
-            self.display("\nGPS: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
-
+        self.connectGPSmodule()
         # Connect to internet
         while True:
             try:
@@ -144,7 +64,96 @@ class BusTracker(object):
         )
         self.ledBlink(3, 0.3)
 
-    def ledBlink(self, times: int = 1, delay: int = 1):
+    def connectLED(self) -> None:
+        try:
+            self.picoLed = Pin(env.hardware.led.pin, Pin.OUT)
+            self.led_state = 1
+            print("\nLED: OK")
+            self.ledBlink(2, 0.1)
+        except Exception as e:
+            self.led_state = 0
+            print("\nLED: ERROR")
+            print(e)
+
+    def connectOLED(self) -> None:
+        try:
+            self.oled = SSD1306_I2C(
+                width=self.env.hardware.oled.resolution.width,  # 128
+                height=self.env.hardware.oled.resolution.height,  # 32
+                i2c=I2C(
+                    id=self.env.hardware.oled.pin.i2c,  # 1
+                    scl=Pin(self.env.hardware.oled.pin.scl),  # 15
+                    sda=Pin(self.env.hardware.oled.pin.sda),  # 14
+                    freq=self.env.hardware.oled.pin.frequency,  # 200000
+                ),
+            )
+            self.oled_state = 1
+            self.display("\nOLED: OK")
+            self.ledBlink(2, 0.1)
+        except Exception as e:
+            self.oled_state = 0
+            print("\nOLED: ERROR")
+            print(e)
+            self.ledBlink(5, 0.1)
+
+    def connectIMU(self) -> None:
+        try:
+            self.imu = MPU6050(
+                side_str=I2C(
+                    id=self.env.hardware.imu.pin.i2c,  # 0
+                    scl=Pin(self.env.hardware.imu.pin.scl),  # 17
+                    sda=Pin(self.env.hardware.imu.pin.sda),  # 14
+                    freq=self.env.hardware.imu.pin.frequency,  # 400000
+                ),
+            )
+            self.imu_state = 1
+            self.display("\nIMU: OK")
+            self.ledBlink(2, 0.1)
+        except Exception as e:
+            self.imu_state = 0
+            self.display("\nIMU: ERROR")
+            print(e)
+            self.ledBlink(5, 0.1)
+
+    def connectSIMmodule(self) -> None:
+        try:
+            self.simModule = Modem(
+                uart=UART(
+                    self.env.hardware.sim.pin.uart,  # 0
+                    baudrate=self.env.hardware.sim.pin.baudrate,  # 9600
+                    tx=Pin(self.env.hardware.sim.pin.tx),  # 0
+                    rx=Pin(self.env.hardware.sim.pin.rx),  # 1
+                ),
+            )
+            self.simModule.initialize()
+            self.sim_state = 1
+            self.display("\nSIM: OK")
+            self.ledBlink(2, 0.1)
+        except Exception as e:
+            self.sim_state = 0
+            self.display("\nSIM: ERROR")
+            print(e)
+            self.ledBlink(5, 0.1)
+
+    def connectGPSmodule(self) -> None:
+        try:
+            self.gpsModule = UART(
+                self.env.hardware.gps.pin.uart,  # 1
+                baudrate=self.env.hardware.gps.pin.baudrate,  # 9600
+                tx=Pin(self.env.hardware.gps.pin.tx),  # 4
+                rx=Pin(self.env.hardware.gps.pin.rx),  # 5
+            )
+            self.gpsParserObject = NMEAparser()
+            self.gps_state = 1
+            self.display("\nGPS: OK")
+            self.ledBlink(2, 0.1)
+        except Exception as e:
+            self.gps_state = 0
+            self.display("\nGPS: ERROR")
+            print(e)
+            self.ledBlink(5, 0.1)
+
+    def ledBlink(self, times: int = 1, delay: int = 1) -> None:
         if self.led_state:
             self.picoLed.value(0)  # turn off led if open
             for _ in range(times * 2 - 1):
@@ -155,7 +164,7 @@ class BusTracker(object):
     # overflow behaviour = "eol : chop the sentance" or "wrap : wrap to next line"
     def display(
         self, text: str, x: int = 0, y: int = 0, color: int = 1, overflow: str = "wrap"
-    ):
+    ) -> None:
         try:
             print(text)
             if self.oled_state and self.last_display != text:
@@ -178,7 +187,7 @@ class BusTracker(object):
             print("Display exception", e)
 
     # Networking Thread
-    def networkingThread(self):
+    def networkingThread(self) -> None:
         currRequestUrl = ""
         lastRequestUrl = ""
 
@@ -205,7 +214,7 @@ class BusTracker(object):
                 print("Networking Exception", e)
 
     # GPS Thread
-    def gpsThread(self):
+    def gpsThread(self) -> None:
         while self.gps_state:
             if self.gpsModule.any():
                 try:
@@ -228,7 +237,7 @@ class BusTracker(object):
                 except Exception as e:
                     print("GPS Exception", e)
 
-    def start(self):
+    def start(self) -> None:
         self.simModule.http_init()
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
