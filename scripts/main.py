@@ -73,8 +73,7 @@ class BusTracker(object):
                     freq=self.env.hardware.oled.pin.frequency,  # 200000
                 ),
             )
-
-            self.display("\nOLED: OK")
+            print("\nOLED: OK")
             self.ledBlink(2, 0.1)
             return True
         except Exception as e:
