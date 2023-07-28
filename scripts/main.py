@@ -9,6 +9,10 @@ import _thread
 
 
 class BusTracker(object):
+    """
+    Bus Tracker object class
+    """
+
     def __init__(self) -> None:
         self.env = env
         # Hardware Connection Status
@@ -160,10 +164,17 @@ class BusTracker(object):
                 utime.sleep(delay)
             self.picoLed.value(0)  # turn off led if somehow left on
 
-    # overflow behaviour = "eol : chop the sentance" or "wrap : wrap to next line"
     def display(
         self, text: str, x: int = 0, y: int = 0, color: int = 1, overflow: str = "wrap"
     ) -> None:
+        """
+        Display text on OLED screen
+
+        Overflow Behaviours
+        eol : chop the sentance
+        wrap : wrap to next line
+        """
+
         try:
             print(text)
             if self.oled_state and self.last_display != text:
@@ -187,6 +198,10 @@ class BusTracker(object):
 
     # Networking Thread
     def networkingThread(self) -> None:
+        """
+        Networking Thread that handels network requests
+        """
+
         currRequestUrl = ""
         lastRequestUrl = ""
 
@@ -214,6 +229,10 @@ class BusTracker(object):
 
     # GPS Thread
     def gpsThread(self) -> None:
+        """
+        GPS Thread that handels reading and parsing GPS data
+        """
+
         while self.gps_state:
             if self.gpsModule.any():
                 try:
@@ -237,6 +256,9 @@ class BusTracker(object):
                     print("GPS Exception", e)
 
     def start(self) -> None:
+        """
+        Starts the tracker by initializing http connection and starting the threads
+        """
         self.simModule.http_init()
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()

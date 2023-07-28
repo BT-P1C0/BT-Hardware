@@ -3,6 +3,9 @@ import ujson
 
 # environment variable to python object
 class envConfig(object):
+    """
+    Load a environment variable json file and convert it to python object
+    """
     def __init__(self, data=None):
         if data is None:
             with open("config.json") as file:
