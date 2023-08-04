@@ -13,6 +13,14 @@ class GenericATError(Exception):
     pass
 
 
+class SpecificATError(Exception):
+    pass
+
+
+class TimeoutError(Exception):
+    pass
+
+
 class Response(object):
     def __init__(self, status_code, content):
         self.status_code = int(status_code)
@@ -20,7 +28,7 @@ class Response(object):
 
 
 class Modem(object):
-    def __init__(self, uart=None, MODEM_RST_PIN=None):
+    def __init__(self, uart=None, MODEM_RST_PIN=None, showSpecificErrors=False):
         # Reset pin
         self.MODEM_RST_PIN = MODEM_RST_PIN
 
@@ -29,12 +37,15 @@ class Modem(object):
 
         self.initialized = False
         self.modem_info = None
+        self.showSpecificErrors: bool = showSpecificErrors
 
     # ----------------------
     #  Modem initializer
     # ----------------------
 
-    def initialize(self):
+    def initialize(
+        self,
+    ):
         if not self.uart:
             from machine import Pin
 
@@ -68,6 +79,11 @@ class Modem(object):
         # Check if SSL is supported
         self.ssl_available = self.execute_at_command("checkssl") == "+CIPSSL: (0-1)"
 
+        # Enable error codes
+
+        if self.showSpecificErrors:
+            self.execute_at_command("enableerrcodes")
+
     # ----------------------
     # Execute AT commands
     # ----------------------
@@ -75,6 +91,7 @@ class Modem(object):
     def execute_at_command(self, command, data=None, clean_output=True):
         # Commands dictionary. Not the best approach ever, but works nicely.
         commands = {
+            "enableerrcodes": {"string": "AT+CMEE=2", "timeout": 3, "end": "OK"},
             "modeminfo": {"string": "ATI", "timeout": 10, "end": "OK"},
             "fwrevision": {"string": "AT+CGMR", "timeout": 3, "end": "OK"},
             "battery": {"string": "AT+CBC", "timeout": 3, "end": "OK"},
@@ -165,16 +182,19 @@ class Modem(object):
                 time.sleep(1)
                 empty_reads += 1
                 if empty_reads > timeout:
-                    raise Exception(
+                    raise TimeoutError(
                         'Timeout for command "{}" (timeout={})'.format(command, timeout)
                     )
             else:
                 # Convert line to string
-                line_str = line.decode("utf-8")
+                line_str: str = line.decode("utf-8")
 
                 # Do we have an error?
                 if line_str == "ERROR\r\n":
                     raise GenericATError("Got generic AT error")
+                # Specific error
+                if line_str.startswith("+CME ERROR"):
+                    raise SpecificATError(line_str + "Error in command" + command)
 
                 # If we had a pre-end, do we have the expected end?
                 if line_str == "{}\r\n".format(excpected_end):
@@ -328,6 +348,8 @@ class Modem(object):
             self.execute_at_command("closebear")
         except GenericATError:
             pass
+        except SpecificATError:
+            pass
 
         # First, init gprs
         self.execute_at_command("initgprs")
@@ -373,6 +395,15 @@ class Modem(object):
             )
 
     def http_init(self):
+        """Initialise http connection"""
+        # Close any previous http connections
+        try:
+            self.http_close()
+        except GenericATError:
+            pass
+        except SpecificATError:
+            pass
+
         self.execute_at_command("inithttp")
         self.execute_at_command("sethttp")
 

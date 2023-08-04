@@ -23,22 +23,20 @@ class BusTracker(object):
             None,
             None,
         )
-        self.last_display, self.httpUrl = "", ""
+        self.last_display: str = ""
+        self.httpUrl: str = ""
         self.lat, self.lng, self.utc = 0, 0, 0
 
         # Pico LED
-        self.led_state = self.connectLED()
+        self.led_state: bool = self.connectLED()
         # OLED Screen
-        self.oled_state = self.connectOLED()
+        self.oled_state: bool = self.connectOLED()
         # IMU
-        self.imu_state = self.connectIMU()
-        # SIM reset pin pulled high
-        self.simModuleRST = Pin(self.env.hardware.sim.pin.rst, Pin.OUT)
-        self.simModuleRST.high()
+        self.imu_state: bool = self.connectIMU()
         # SIM Module
-        self.sim_state = self.connectSIMmodule()
+        self.sim_state: bool = self.connectSIMmodule()
         # GPS Module
-        self.gps_state = self.connectGPSmodule()
+        self.gps_state: bool = self.connectGPSmodule()
         # Connect to internet
         self.connectToInternet()
 
@@ -114,6 +112,8 @@ class BusTracker(object):
                     tx=Pin(self.env.hardware.sim.pin.tx),  # 0
                     rx=Pin(self.env.hardware.sim.pin.rx),  # 1
                 ),
+                MODEM_RST_PIN=self.env.hardware.sim.pin.rst,
+                showSpecificErrors=True,
             )
             self.simModule.initialize()
             self.display("\nSIM: OK")
