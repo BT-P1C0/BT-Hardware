@@ -384,6 +384,8 @@ class Modem(object):
             self.execute_at_command("closebear")
         except GenericATError:
             pass
+        except SpecificATError:
+            pass
 
         # Check that we are actually disconnected
         ip_addr = self.get_ip_addr()
