@@ -1,11 +1,14 @@
 import utime
-from machine import Pin, UART, I2C
+from machine import Pin, UART, I2C, WDT
 from NMEA import NMEAparser
 from SIM800L import Modem
 from helper import env, httpGetUrl, crashUrl
 from imu import MPU6050
 from ssd1306 import SSD1306_I2C
 import _thread
+
+# Watchdog Timer
+wdt = WDT(timeout=8000)  # 8 seconds (8388 is max)
 
 
 class BusTracker(object):
@@ -14,52 +17,64 @@ class BusTracker(object):
     """
 
     def __init__(self) -> None:
+        wdt.feed()
+
         self.env = env
         # Hardware Connection Status
-        self.oled, self.picoLed, self.imu, self.simModule, self.gpsModule = (
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        self.oled: SSD1306_I2C | None = None
+        self.picoLed: Pin | None = None
+        self.imu: MPU6050 | None = None
+        self.simModule: Modem | None = None
+        self.gpsModule: UART | None = None
+        self.gpsParserObject: NMEAparser | None = None
+
         self.last_display: str = ""
         self.httpUrl: str = ""
         self.lat, self.lng, self.utc = 0, 0, 0
 
         # Pico LED
+        wdt.feed()
         self.led_state: bool = self.connectLED()
         # OLED Screen
+        wdt.feed()
         self.oled_state: bool = self.connectOLED()
         # IMU
+        wdt.feed()
         self.imu_state: bool = self.connectIMU()
         # SIM Module
+        wdt.feed()
         self.sim_state: bool = self.connectSIMmodule()
         # GPS Module
+        wdt.feed()
         self.gps_state: bool = self.connectGPSmodule()
+
+        # Get batter status from SIM Module
+        battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
+        self.display(f"Battery: {battLevel}\nVoltage: {battVoltage}")
+        print(
+            f"Battery: {battChargeStatus}, Level: {battLevel}, Voltage: {battVoltage}"
+        )
+
         # Connect to internet
+        wdt.feed()
         self.connectToInternet()
+        wdt.feed()
 
         RSSI, BER = self.simModule.get_signal_strength()
-        battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
-
-        self.display(
-            f"IP: {self.simModule.get_ip_addr()}\nRSSI: {RSSI}%\nBatt Level:{battLevel}"
-        )
+        self.display(f"IP: {self.simModule.get_ip_addr()}\nRSSI: {RSSI}%")
         # 99 is "not know or not detectable"
-        print(
-            f"RSSI: {RSSI}%, BER: {BER}, Battery: {battChargeStatus}, Level: {battLevel}, Voltage: {battVoltage}"
-        )
+        print(f"BER: {BER}")
         self.ledBlink(3, 0.3)
+        wdt.feed()
 
     def connectLED(self) -> bool:
         try:
             self.picoLed = Pin(env.hardware.led.pin, Pin.OUT)
-            print("\nLED: OK")
+            print("LED: OK")
             return True
         except Exception as e:
             self.picoLed = None
-            print("\nLED: ERROR")
+            print("LED: ERROR")
             print(e)
             return False
 
@@ -75,11 +90,11 @@ class BusTracker(object):
                     freq=self.env.hardware.oled.pin.frequency,  # 200000
                 ),
             )
-            print("\nOLED: OK")
+            print("OLED: OK")
             self.ledBlink(2, 0.1)
             return True
         except Exception as e:
-            print("\nOLED: ERROR")
+            print("OLED: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
             return False
@@ -94,11 +109,11 @@ class BusTracker(object):
                     freq=self.env.hardware.imu.pin.frequency,  # 400000
                 ),
             )
-            self.display("\nIMU: OK")
+            self.display("IMU: OK")
             self.ledBlink(2, 0.1)
             return True
         except Exception as e:
-            self.display("\nIMU: ERROR")
+            self.display("IMU: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
             return False
@@ -116,11 +131,11 @@ class BusTracker(object):
                 showSpecificErrors=True,
             )
             self.simModule.initialize()
-            self.display("\nSIM: OK")
+            self.display("SIM: OK")
             self.ledBlink(2, 0.1)
             return True
         except Exception as e:
-            self.display("\nSIM: ERROR")
+            self.display("SIM: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
             return False
@@ -134,18 +149,18 @@ class BusTracker(object):
                 rx=Pin(self.env.hardware.gps.pin.rx),  # 5
             )
             self.gpsParserObject = NMEAparser()
-            self.display("\nGPS: OK")
+            self.display("GPS: OK")
             self.ledBlink(2, 0.1)
             return True
         except Exception as e:
-            self.display("\nGPS: ERROR")
+            self.display("GPS: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
             return False
 
     def connectToInternet(self) -> None:
         self.display(
-            "\nConnecting to internet...",
+            "Connecting to internet...",
         )
         while True:
             try:
@@ -154,7 +169,7 @@ class BusTracker(object):
                 break
             except Exception as e:
                 self.display("\nUnable to connect to internet, retrying...")
-                print(e)
+                print(f"Internet Connection Exception: {e}")
 
     def ledBlink(self, times: int = 1, delay: int = 1) -> None:
         if self.led_state:
@@ -176,7 +191,7 @@ class BusTracker(object):
         """
 
         try:
-            print(text)
+            print("\n" + text)
             if self.oled_state and self.last_display != text:
                 self.oled.fill(0)
                 lines = text.splitlines()
@@ -234,6 +249,7 @@ class BusTracker(object):
         """
 
         while self.gps_state:
+            wdt.feed()
             if self.gpsModule.any():
                 try:
                     if self.gpsParserObject.update(
@@ -259,7 +275,9 @@ class BusTracker(object):
         """
         Starts the tracker by initializing http connection and starting the threads
         """
+        self.display("Initialising HTTP connection")
         self.simModule.http_init()
+        self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
 

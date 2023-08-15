@@ -28,6 +28,8 @@ class Response(object):
 
 
 class Modem(object):
+    """Modem class. Handles all the AT commands and responses."""
+
     def __init__(self, uart=None, MODEM_RST_PIN=None, showSpecificErrors=False):
         # Reset pin
         self.MODEM_RST_PIN = MODEM_RST_PIN
