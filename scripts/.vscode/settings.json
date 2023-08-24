@@ -1,4 +1,8 @@
 {
 	"python.analysis.typeshedPaths": [".vscode\\Pico-W-Stub"],
-	"python.analysis.extraPaths": [".vscode\\Pico-W-Stub\\stubs"]
+	"python.analysis.extraPaths": [".vscode\\Pico-W-Stub\\stubs"],
+	"[python]": {
+		"editor.defaultFormatter": "ms-python.black-formatter"
+	},
+	"python.formatting.provider": "none"
 }

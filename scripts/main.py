@@ -7,9 +7,6 @@ from imu import MPU6050
 from ssd1306 import SSD1306_I2C
 import _thread
 
-# Watchdog Timer
-wdt = WDT(timeout=8000)  # 8 seconds (8388 is max)
-
 
 class BusTracker(object):
     """
@@ -47,8 +44,9 @@ class BusTracker(object):
         # GPS Module
         wdt.feed()
         self.gps_state: bool = self.connectGPSmodule()
+        wdt.feed()
 
-        # Get batter status from SIM Module
+        # Get battery status from SIM Module
         battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
         self.display(f"Battery: {battLevel}\nVoltage: {battVoltage}")
         print(
@@ -60,10 +58,6 @@ class BusTracker(object):
         self.connectToInternet()
         wdt.feed()
 
-        RSSI, BER = self.simModule.get_signal_strength()
-        self.display(f"IP: {self.simModule.get_ip_addr()}\nRSSI: {RSSI}%")
-        # 99 is "not know or not detectable"
-        print(f"BER: {BER}")
         self.ledBlink(3, 0.3)
         wdt.feed()
 
@@ -165,7 +159,11 @@ class BusTracker(object):
         while True:
             try:
                 assert self.sim_state == 1
-                self.simModule.connect(apn="airtelgprs.net")
+                ip = self.simModule.connect(apn="airtelgprs.net")
+                RSSI, BER = self.simModule.get_signal_strength()
+                self.display(f"IP: {ip}\nRSSI: {RSSI}%")
+                # 99 is "not know or not detectable"
+                print(f"BER: {BER}")
                 break
             except Exception as e:
                 self.display("\nUnable to connect to internet, retrying...")
@@ -191,23 +189,24 @@ class BusTracker(object):
         """
 
         try:
-            print("\n" + text)
-            if self.oled_state and self.last_display != text:
-                self.oled.fill(0)
-                lines = text.splitlines()
-                for index in range(4):
-                    if index < len(lines):
-                        line = lines[index]
-                        if len(line) > 16:
-                            if overflow == "eol":
-                                line = line[:16]
-                            else:
-                                lines.insert(index + 1, line[16:])
-                                line = line[:16]
-                        self.oled.text(line.strip(), x, y, 1)
-                        y += 8
-                        self.oled.show()
-                self.last_display = text
+            if self.last_display != text:
+                print("\n" + text)
+                if self.oled_state:
+                    self.oled.fill(0)
+                    lines = text.splitlines()
+                    for index in range(4):
+                        if index < len(lines):
+                            line = lines[index]
+                            if len(line) > 16:
+                                if overflow == "eol":
+                                    line = line[:16]
+                                else:
+                                    lines.insert(index + 1, line[16:])
+                                    line = line[:16]
+                            self.oled.text(line.strip(), x, y, 1)
+                            y += 8
+                            self.oled.show()
+                    self.last_display = text
         except Exception as e:
             print("Display exception", e)
 
@@ -240,7 +239,8 @@ class BusTracker(object):
                         lastRequestUrl = currRequestUrl
 
             except Exception as e:
-                print("Networking Exception", e)
+                self.display("Networking Exception")
+                print(e)
 
     # GPS Thread
     def gpsThread(self) -> None:
@@ -268,6 +268,10 @@ class BusTracker(object):
                                 self.lng,
                                 self.utc,
                             )
+                        else:
+                            self.display("GPS: No Fix")
+                    else:
+                        self.display("Waiting for GPS data")
                 except Exception as e:
                     print("GPS Exception", e)
 
@@ -275,13 +279,20 @@ class BusTracker(object):
         """
         Starts the tracker by initializing http connection and starting the threads
         """
+        wdt.feed()
         self.display("Initialising HTTP connection")
         self.simModule.http_init()
+        wdt.feed()
+
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
 
 
 if __name__ == "__main__":
-    tracker = BusTracker()
+    # Watchdog Timer
+    utime.sleep(1)
+    print("Starting Bus Tracker")
+    wdt: WDT = WDT(timeout=8000)  # 8 seconds (8388 is max)
+    tracker: BusTracker = BusTracker()
     tracker.start()

@@ -342,8 +342,8 @@ class Modem(object):
             raise Exception("Modem is not initialized, cannot connect")
 
         # Are we already connected?
-        if self.get_ip_addr():
-            return
+        if ip_addr := self.get_ip_addr():
+            return ip_addr
 
         # Closing bearer if left opened from a previous connect gone wrong:
         try:
@@ -379,6 +379,8 @@ class Modem(object):
                 time.sleep(1)
             else:
                 break
+
+        return ip_addr
 
     def disconnect(self):
         # Close bearer
