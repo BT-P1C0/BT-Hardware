@@ -2,7 +2,7 @@ import utime
 from machine import Pin, UART, I2C, WDT
 from NMEA import NMEAparser
 from SIM800L import Modem
-from helper import env, httpGetUrl, crashUrl
+from helper import env, httpGetUrl, debugUrl
 from imu import MPU6050
 from ssd1306 import SSD1306_I2C
 import _thread
@@ -57,6 +57,9 @@ class BusTracker(object):
         wdt.feed()
         self.connectToInternet()
         wdt.feed()
+
+        # send boot debug message
+        self.simModule.http_request(mode="GET", url=debugUrl("online"))
 
         self.ledBlink(3, 0.3)
         wdt.feed()

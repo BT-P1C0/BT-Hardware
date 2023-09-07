@@ -6,6 +6,7 @@ class envConfig(object):
     """
     Load a environment variable json file and convert it to python object
     """
+
     def __init__(self, data=None):
         if data is None:
             with open("config.json") as file:
@@ -38,3 +39,8 @@ def httpGetUrl(lat: float, lng: float, utc: float):
 def crashUrl(lat: float, lng: float, utc: float):
     payload = f"%7B%22bus%22%3A%22{env.id.busNo}%22%2C%22lat%22%3A{lat}%2C%22lng%22%3A{lng}%2C%22utc%22%3A{utc}%7D"
     return f"http://ps.pndsn.com/publish/{env.pubnub.pk}/{env.pubnub.sk}/0/crash_notification/0/{payload}?uuid={env.id.uuid}"
+
+
+def debugUrl(value: str):
+    payload = f"%7B%0A%20%20%20%20%22bus%22%3A%20%22{env.id.busNo}%22%2C%0A%20%20%20%20%22status%22%3A%20%22{value}%22%0A%7D"
+    return f"http://ps.pndsn.com/publish/{env.pubnub.pk}/{env.pubnub.sk}/0/debug_channel/0/{payload}?uuid={env.id.uuid}"
