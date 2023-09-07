@@ -31,6 +31,8 @@ The Tracker updates its location on the website [here](<[https://mg-lsj.github.i
 4. Run this command. `Pico-W-Go > Configure Project`
 5. Done.
 
+A helpful youtube tutorial to setup VS code for Pico can be found [here](https://www.youtube.com/watch?v=O6lkYTfcMEg).
+
 ### Hardware Checks
 
 Check LEDs on modules to see if modules are working correctly  
