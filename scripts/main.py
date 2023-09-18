@@ -3,8 +3,7 @@ from machine import Pin, UART, I2C, WDT
 from NMEA import NMEAparser
 from SIM800L import Modem
 from helper import env, httpGetUrl, debugUrl
-from imu import MPU6050
-from ssd1306 import SSD1306_I2C
+from OLED import SSD1306_I2C
 import _thread
 
 
@@ -20,7 +19,7 @@ class BusTracker(object):
         # Hardware Connection Status
         self.oled: SSD1306_I2C | None = None
         self.picoLed: Pin | None = None
-        self.imu: MPU6050 | None = None
+        # self.imu: MPU6050 | None = None
         self.simModule: Modem | None = None
         self.gpsModule: UART | None = None
         self.gpsParserObject: NMEAparser | None = None
@@ -35,9 +34,9 @@ class BusTracker(object):
         # OLED Screen
         wdt.feed()
         self.oled_state: bool = self.connectOLED()
-        # IMU
-        wdt.feed()
-        self.imu_state: bool = self.connectIMU()
+        # # IMU
+        # wdt.feed()
+        # self.imu_state: bool = self.connectIMU()
         # SIM Module
         wdt.feed()
         self.sim_state: bool = self.connectSIMmodule()
@@ -59,7 +58,7 @@ class BusTracker(object):
         wdt.feed()
 
         # send boot debug message
-        self.simModule.http_request(mode="GET", url=debugUrl("online"))
+        # self.simModule.http_request(mode="GET", url=debugUrl("online"))
 
         self.ledBlink(3, 0.3)
         wdt.feed()
@@ -96,24 +95,24 @@ class BusTracker(object):
             self.ledBlink(5, 0.1)
             return False
 
-    def connectIMU(self) -> bool:
-        try:
-            self.imu = MPU6050(
-                side_str=I2C(
-                    id=self.env.hardware.imu.pin.i2c,  # 0
-                    scl=Pin(self.env.hardware.imu.pin.scl),  # 17
-                    sda=Pin(self.env.hardware.imu.pin.sda),  # 14
-                    freq=self.env.hardware.imu.pin.frequency,  # 400000
-                ),
-            )
-            self.display("IMU: OK")
-            self.ledBlink(2, 0.1)
-            return True
-        except Exception as e:
-            self.display("IMU: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
-            return False
+    # def connectIMU(self) -> bool:
+    #     try:
+    #         self.imu = MPU6050(
+    #             side_str=I2C(
+    #                 id=self.env.hardware.imu.pin.i2c,  # 0
+    #                 scl=Pin(self.env.hardware.imu.pin.scl),  # 17
+    #                 sda=Pin(self.env.hardware.imu.pin.sda),  # 14
+    #                 freq=self.env.hardware.imu.pin.frequency,  # 400000
+    #             ),
+    #         )
+    #         self.display("IMU: OK")
+    #         self.ledBlink(2, 0.1)
+    #         return True
+    #     except Exception as e:
+    #         self.display("IMU: ERROR")
+    #         print(e)
+    #         self.ledBlink(5, 0.1)
+    #         return False
 
     def connectSIMmodule(self) -> bool:
         try:
@@ -273,8 +272,7 @@ class BusTracker(object):
                             )
                         else:
                             self.display("GPS: No Fix")
-                    else:
-                        self.display("Waiting for GPS data")
+
                 except Exception as e:
                     print("GPS Exception", e)
 
