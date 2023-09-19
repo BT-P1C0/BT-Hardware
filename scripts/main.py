@@ -57,9 +57,6 @@ class BusTracker(object):
         self.connectToInternet()
         wdt.feed()
 
-        # send boot debug message
-        # self.simModule.http_request(mode="GET", url=debugUrl("online"))
-
         self.ledBlink(3, 0.3)
         wdt.feed()
 
@@ -123,7 +120,7 @@ class BusTracker(object):
                     tx=Pin(self.env.hardware.sim.pin.tx),  # 0
                     rx=Pin(self.env.hardware.sim.pin.rx),  # 1
                 ),
-                MODEM_RST_PIN=self.env.hardware.sim.pin.rst,
+                MODEM_RST_PIN=self.env.hardware.sim.pin.rst,  # 2
                 showSpecificErrors=True,
             )
             self.simModule.initialize()
@@ -141,8 +138,8 @@ class BusTracker(object):
             self.gpsModule = UART(
                 self.env.hardware.gps.pin.uart,  # 1
                 baudrate=self.env.hardware.gps.pin.baudrate,  # 9600
-                tx=Pin(self.env.hardware.gps.pin.tx),  # 4
-                rx=Pin(self.env.hardware.gps.pin.rx),  # 5
+                tx=Pin(self.env.hardware.gps.pin.tx),  # 8
+                rx=Pin(self.env.hardware.gps.pin.rx),  # 9
             )
             self.gpsParserObject = NMEAparser()
             self.display("GPS: OK")
@@ -158,7 +155,13 @@ class BusTracker(object):
         self.display(
             "Connecting to internet...",
         )
+        retires: int = 0
+
         while True:
+            print("Try", retires + 1)
+            if retires < 10:
+                wdt.feed()
+
             try:
                 assert self.sim_state == 1
                 ip = self.simModule.connect(apn="airtelgprs.net")
@@ -168,8 +171,10 @@ class BusTracker(object):
                 print(f"BER: {BER}")
                 break
             except Exception as e:
-                self.display("\nUnable to connect to internet, retrying...")
+                self.display(f"\nConnection failed\ntry {retires + 1}/10")
                 print(f"Internet Connection Exception: {e}")
+
+            retires += 1
 
     def ledBlink(self, times: int = 1, delay: int = 1) -> None:
         if self.led_state:
@@ -211,6 +216,10 @@ class BusTracker(object):
                     self.last_display = text
         except Exception as e:
             print("Display exception", e)
+
+    def onlineDebugMessage(self) -> None:
+        response = self.simModule.http_request(mode="GET", url=debugUrl("online"))
+        self.display(f"Device Online\nStatus Code: {response.status_code}\n")
 
     # Networking Thread
     def networkingThread(self) -> None:
@@ -257,21 +266,20 @@ class BusTracker(object):
                     if self.gpsParserObject.update(
                         (self.gpsModule.read(1)).decode("ASCII")
                     ):
-                        if (
-                            self.gpsParserObject.utc_time
-                            and self.gpsParserObject.lat
-                            and self.gpsParserObject.lng
-                        ):
-                            self.lat = self.gpsParserObject.lat
-                            self.lng = self.gpsParserObject.lng
-                            self.utc = self.gpsParserObject.utc_time
-                            self.httpUrl = httpGetUrl(
-                                self.lat,
-                                self.lng,
-                                self.utc,
-                            )
+                        if self.gpsParserObject.utc_time:
+                            if self.gpsParserObject.lat and self.gpsParserObject.lng:
+                                self.lat = self.gpsParserObject.lat
+                                self.lng = self.gpsParserObject.lng
+                                self.utc = self.gpsParserObject.utc_time
+                                self.httpUrl = httpGetUrl(
+                                    self.lat,
+                                    self.lng,
+                                    self.utc,
+                                )
+                            else:
+                                self.display("GPS: No Location Fix")
                         else:
-                            self.display("GPS: No Fix")
+                            self.display("GPS: No Time Fix")
 
                 except Exception as e:
                     print("GPS Exception", e)
@@ -284,7 +292,8 @@ class BusTracker(object):
         self.display("Initialising HTTP connection")
         self.simModule.http_init()
         wdt.feed()
-
+        self.onlineDebugMessage()
+        wdt.feed()
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
@@ -292,7 +301,8 @@ class BusTracker(object):
 
 if __name__ == "__main__":
     # Watchdog Timer
-    utime.sleep(1)
+    print("Boot 5 sec hold")
+    utime.sleep(5)
     print("Starting Bus Tracker")
     wdt: WDT = WDT(timeout=8000)  # 8 seconds (8388 is max)
     tracker: BusTracker = BusTracker()

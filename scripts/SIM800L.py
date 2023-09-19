@@ -196,7 +196,7 @@ class Modem(object):
                     raise GenericATError("Got generic AT error")
                 # Specific error
                 if line_str.startswith("+CME ERROR"):
-                    raise SpecificATError(line_str + "Error in command" + command)
+                    raise SpecificATError(line_str + "\nError in command:" + command)
 
                 # If we had a pre-end, do we have the expected end?
                 if line_str == "{}\r\n".format(excpected_end):
