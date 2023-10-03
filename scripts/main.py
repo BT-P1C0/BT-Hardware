@@ -14,7 +14,7 @@ class BusTracker(object):
 
     def __init__(self) -> None:
         wdt.feed()
-
+        # Environment Variables like pin numbers
         self.env = env
         # Hardware Connection Status
         self.oled: SSD1306_I2C | None = None
@@ -27,7 +27,7 @@ class BusTracker(object):
         self.last_display: str = ""
         self.httpUrl: str = ""
         self.lat, self.lng, self.utc = 0, 0, 0
-
+        self.RISSI, self.BER = 0, 0
         # Pico LED
         wdt.feed()
         self.led_state: bool = self.connectLED()
@@ -151,6 +151,9 @@ class BusTracker(object):
             self.ledBlink(5, 0.1)
             return False
 
+    def getSignalStrength(self) -> None:
+        self.RSSI, self.BER = self.simModule.get_signal_strength()
+
     def connectToInternet(self) -> None:
         self.display(
             "Connecting to internet...",
@@ -165,10 +168,10 @@ class BusTracker(object):
             try:
                 assert self.sim_state == 1
                 ip = self.simModule.connect(apn="airtelgprs.net")
-                RSSI, BER = self.simModule.get_signal_strength()
-                self.display(f"IP: {ip}\nRSSI: {RSSI}%")
+                self.getSignalStrength()
+                self.display(f"IP: {ip}\nRSSI: {self.RSSI}%")
                 # 99 is "not know or not detectable"
-                print(f"BER: {BER}")
+                print(f"BER: {self.BER}")
                 break
             except Exception as e:
                 self.display(f"\nConnection failed\ntry {retires + 1}/10")
@@ -218,7 +221,9 @@ class BusTracker(object):
             print("Display exception", e)
 
     def onlineDebugMessage(self) -> None:
-        response = self.simModule.http_request(mode="GET", url=debugUrl("online"))
+        response = self.simModule.http_request(
+            mode="GET", url=debugUrl(status="online")
+        )
         self.display(f"Device Online\nStatus Code: {response.status_code}\n")
 
     # Networking Thread
@@ -234,6 +239,7 @@ class BusTracker(object):
             try:
                 if self.httpUrl:
                     currRequestUrl = self.httpUrl
+
                     if currRequestUrl != lastRequestUrl:
                         self.display(f"\nSending Location")
                         print("Url =", currRequestUrl)
@@ -248,6 +254,10 @@ class BusTracker(object):
                         )
                         print("Response:", response.content)
                         lastRequestUrl = currRequestUrl
+
+                    else:
+                        self.getSignalStrength()
+                        self.onlineDebugMessage()
 
             except Exception as e:
                 self.display("Networking Exception")

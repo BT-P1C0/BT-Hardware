@@ -41,6 +41,6 @@ def crashUrl(lat: float, lng: float, utc: float):
     return f"http://ps.pndsn.com/publish/{env.pubnub.pk}/{env.pubnub.sk}/0/crash_notification/0/{payload}?uuid={env.id.uuid}"
 
 
-def debugUrl(value: str):
-    payload = f"%7B%0A%20%20%20%20%22bus%22%3A%20%22{env.id.busNo}%22%2C%0A%20%20%20%20%22status%22%3A%20%22{value}%22%0A%7D"
+def debugUrl(status: str, RSSI):
+    payload = f"%7B%0A%20%20%20%20%22bus%22%3A%20%22{env.id.busNo}%22%2C%0A%20%20%20%20%22status%22%3A%20%22{status}%22%2C%0A%20%20%20%20%22RSSI%22%3A%20%22{RSSI}%22%0A%7D"
     return f"http://ps.pndsn.com/publish/{env.pubnub.pk}/{env.pubnub.sk}/0/debug_channel/0/{payload}?uuid={env.id.uuid}"
