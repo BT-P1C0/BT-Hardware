@@ -2,7 +2,7 @@ import utime
 from machine import Pin, UART, I2C, WDT, reset, reset_cause
 from NMEA import NMEAparser
 from SIM800L import Modem
-from helper import env, httpGetUrl, debugUrl
+from helper import *
 from OLED import SSD1306_I2C
 import _thread
 
@@ -59,6 +59,15 @@ class BusTracker(object):
 
         self.ledBlink(3, 0.3)
         # wdt.feed()
+
+    def hardReset(self) -> None:
+        """
+        Hard reset the device
+        """
+        self.simModule.MODEM_RST_PIN.toggle()
+        utime.sleep(1)
+        self.simModule.MODEM_RST_PIN.toggle()
+        reset()
 
     def connectLED(self) -> bool:
         try:
@@ -120,7 +129,7 @@ class BusTracker(object):
                     tx=Pin(self.env.hardware.sim.pin.tx),  # 0
                     rx=Pin(self.env.hardware.sim.pin.rx),  # 1
                 ),
-                MODEM_RST_PIN=self.env.hardware.sim.pin.rst,  # 2
+                MODEM_RST_PIN=Pin(self.env.hardware.sim.pin.rst),  # 2
                 showSpecificErrors=True,
             )
             self.simModule.initialize()
@@ -163,7 +172,7 @@ class BusTracker(object):
         while True:
             print("Try", retires + 1)
             if retires > 10:
-                reset()
+                self.hardReset()
                 # wdt.feed()
 
             try:
@@ -221,11 +230,37 @@ class BusTracker(object):
         except Exception as e:
             print("Display exception", e)
 
-    def onlineDebugMessage(self) -> None:
-        response = self.simModule.http_request(
-            mode="GET", url=debugUrl(status="online")
-        )
-        self.display(f"Device Online\nStatus Code: {response.status_code}\n")
+    def onlineDebugMessage(self, retry: bool = True) -> None:
+        failedRequests = 0
+        while True:
+            if failedRequests > 10:
+                self.hardReset()
+            try:
+                url = debugPostUrl()
+                self.display(f"\nSending Debug Message")
+                print("Url =", url)
+                self.picoLed.value(1)
+
+                response = self.simModule.http_request(
+                    mode="POST",
+                    url=url,
+                    data=debugPostPayload(status="online", RSSI=self.RSSI),
+                )
+
+                self.picoLed.value(0)
+                self.display(f"Device Online\nStatus Code: {response.status_code}\n")
+                print("Response:", response.content)
+
+                if response.status_code == 200:
+                    break
+                else:
+                    failedRequests += 1
+            except Exception as e:
+                failedRequests += 1
+                self.display("Networking Exception")
+                print(e)
+            if not retry:
+                break
 
     # Networking Thread
     def networkingThread(self) -> None:
@@ -236,11 +271,11 @@ class BusTracker(object):
         currRequestUrl = ""
         lastRequestUrl = ""
 
-        failedRequests = 0
+        failedRequests: int = 0
 
         while self.sim_state:
             if failedRequests > 10:
-                reset()
+                self.hardReset()
 
             try:
                 if self.httpUrl:
@@ -261,11 +296,17 @@ class BusTracker(object):
                         print("Response:", response.content)
                         lastRequestUrl = currRequestUrl
 
+                        if response.status_code == 200:
+                            failedRequests = 0
+                        else:
+                            failedRequests += 1
+
                     else:
                         self.getSignalStrength()
-                        self.onlineDebugMessage()
+                        self.onlineDebugMessage(retry=False)
 
             except Exception as e:
+                failedRequests += 1
                 self.display("Networking Exception")
                 print(e)
 
@@ -307,8 +348,9 @@ class BusTracker(object):
         # wdt.feed()
         self.display("Initialising HTTP connection")
         self.simModule.http_init()
+        self.display("Initialised HTTP connection")
         # wdt.feed()
-        self.onlineDebugMessage()
+        self.onlineDebugMessage(retry=False)
         # wdt.feed()
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())
@@ -321,5 +363,9 @@ if __name__ == "__main__":
     # utime.sleep(5)
     print("Starting Bus Tracker")
     # wdt: WDT = WDT(timeout=8000)  # 8 seconds (8388 is max)
-    tracker: BusTracker = BusTracker()
-    tracker.start()
+    try:
+        tracker: BusTracker = BusTracker()
+        tracker.start()
+    except Exception as e:
+        print("Main Exception", e)
+        reset()
