@@ -1,5 +1,5 @@
 import utime
-from machine import Pin, UART, I2C, WDT
+from machine import Pin, UART, I2C, WDT, reset, reset_cause
 from NMEA import NMEAparser
 from SIM800L import Modem
 from helper import env, httpGetUrl, debugUrl
@@ -13,7 +13,7 @@ class BusTracker(object):
     """
 
     def __init__(self) -> None:
-        wdt.feed()
+        # wdt.feed()
         # Environment Variables like pin numbers
         self.env = env
         # Hardware Connection Status
@@ -29,21 +29,21 @@ class BusTracker(object):
         self.lat, self.lng, self.utc = 0, 0, 0
         self.RISSI, self.BER = 0, 0
         # Pico LED
-        wdt.feed()
+        # wdt.feed()
         self.led_state: bool = self.connectLED()
         # OLED Screen
-        wdt.feed()
+        # wdt.feed()
         self.oled_state: bool = self.connectOLED()
         # # IMU
         # wdt.feed()
         # self.imu_state: bool = self.connectIMU()
         # SIM Module
-        wdt.feed()
+        # wdt.feed()
         self.sim_state: bool = self.connectSIMmodule()
         # GPS Module
-        wdt.feed()
+        # wdt.feed()
         self.gps_state: bool = self.connectGPSmodule()
-        wdt.feed()
+        # wdt.feed()
 
         # Get battery status from SIM Module
         battChargeStatus, battLevel, battVoltage = self.simModule.battery_status()
@@ -53,12 +53,12 @@ class BusTracker(object):
         )
 
         # Connect to internet
-        wdt.feed()
+        # wdt.feed()
         self.connectToInternet()
-        wdt.feed()
+        # wdt.feed()
 
         self.ledBlink(3, 0.3)
-        wdt.feed()
+        # wdt.feed()
 
     def connectLED(self) -> bool:
         try:
@@ -162,8 +162,9 @@ class BusTracker(object):
 
         while True:
             print("Try", retires + 1)
-            if retires < 10:
-                wdt.feed()
+            if retires > 10:
+                reset()
+                # wdt.feed()
 
             try:
                 assert self.sim_state == 1
@@ -235,7 +236,12 @@ class BusTracker(object):
         currRequestUrl = ""
         lastRequestUrl = ""
 
+        failedRequests = 0
+
         while self.sim_state:
+            if failedRequests > 10:
+                reset()
+
             try:
                 if self.httpUrl:
                     currRequestUrl = self.httpUrl
@@ -270,7 +276,7 @@ class BusTracker(object):
         """
 
         while self.gps_state:
-            wdt.feed()
+            # wdt.feed()
             if self.gpsModule.any():
                 try:
                     if self.gpsParserObject.update(
@@ -298,12 +304,12 @@ class BusTracker(object):
         """
         Starts the tracker by initializing http connection and starting the threads
         """
-        wdt.feed()
+        # wdt.feed()
         self.display("Initialising HTTP connection")
         self.simModule.http_init()
-        wdt.feed()
+        # wdt.feed()
         self.onlineDebugMessage()
-        wdt.feed()
+        # wdt.feed()
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())
         self.gpsThread()
@@ -311,9 +317,9 @@ class BusTracker(object):
 
 if __name__ == "__main__":
     # Watchdog Timer
-    print("Boot 5 sec hold")
-    utime.sleep(5)
+    # print("Boot 5 sec hold")
+    # utime.sleep(5)
     print("Starting Bus Tracker")
-    wdt: WDT = WDT(timeout=8000)  # 8 seconds (8388 is max)
+    # wdt: WDT = WDT(timeout=8000)  # 8 seconds (8388 is max)
     tracker: BusTracker = BusTracker()
     tracker.start()
