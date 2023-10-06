@@ -11,3 +11,7 @@ class id:
 class env:
     pubnub = pubnub()
     id = id()
+
+
+if __name__ == "__main__":
+    pass

@@ -46,3 +46,7 @@ def debugPostUrl():
 def debugPostPayload(status: str, RSSI):
     payload = {"bus": env.id.busNo, "status": status, "RSSI": RSSI}
     return json.dumps(payload)
+
+
+if __name__ == "__main__":
+    pass

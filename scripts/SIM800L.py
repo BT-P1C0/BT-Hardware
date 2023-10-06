@@ -623,3 +623,7 @@ class SIM800L(object):
         if not self.sslSupported:
             raise Exception("SSL is not supported by this modem")
         self.execute(Commands.setSSL(0))
+
+
+if __name__ == "__main__":
+    pass

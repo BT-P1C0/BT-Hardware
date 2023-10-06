@@ -35,3 +35,7 @@ class Hardware:
     )
 
     led = Pin(25, Pin.OUT)
+
+
+if __name__ == "__main__":
+    pass
