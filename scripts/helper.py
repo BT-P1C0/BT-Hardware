@@ -1,33 +1,26 @@
-import ujson
+from env import env
+import json
 
 
 # environment variable to python object
-class envConfig(object):
+class ObjectFromDict(object):
     """
-    Load a environment variable json file and convert it to python object
+    Convert python dictionary to object
     """
 
-    def __init__(self, data=None):
-        if data is None:
-            with open("config.json") as file:
-                data = ujson.load(file)
-        else:
-            data = dict(data)
-
+    def __init__(self, data: dict):
         for key, val in data.items():
-            setattr(self, key, self.compute_attr_value(val))
+            setattr(self, key, self.__compute_attr_value(val))
 
-    def compute_attr_value(self, value):
-        if type(value) is list:
-            return [self.compute_attr_value(x) for x in value]
+    def __compute_attr_value(self, value):
+        if type(value) is list or type(value) is tuple:
+            return [self.__compute_attr_value(x) for x in value]
         elif type(value) is dict:
-            return envConfig(value)
+            return ObjectFromDict(value)
         else:
             return value
 
 
-# Environment Vraiables
-env = envConfig()
 channel = "bus_" + env.id.busNo
 
 
@@ -52,5 +45,4 @@ def debugPostUrl():
 
 def debugPostPayload(status: str, RSSI):
     payload = {"bus": env.id.busNo, "status": status, "RSSI": RSSI}
-    return ujson.dumps(payload)
-    return f"%7B%0A%20%20%20%20%22bus%22%3A%20%22{env.id.busNo}%22%2C%0A%20%20%20%20%22status%22%3A%20%22{status}%22%2C%0A%20%20%20%20%22RSSI%22%3A%20%22{RSSI}%22%0A%7D"
+    return json.dumps(payload)
