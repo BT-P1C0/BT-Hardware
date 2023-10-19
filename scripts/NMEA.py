@@ -4,49 +4,37 @@ Original File: https://github.com/inmcm/micropyGPS/blob/master/micropyGPS.py
 Used under MIT License
 """
 
-try:
-    import utime
-except ImportError:
-    import time
-
 
 class NMEAparser(object):
     """GPS NMEA Sentence Parser. Creates object that stores all relevant GPS data and statistics.
     Parses sentences one character at a time using update()."""
 
     # Max Number of Characters a valid sentence can be (based on GGA sentence)
-    SENTENCE_LIMIT = 90
+    __NMEA_MAX_CHAR_COUNT = 90
     __HEMISPHERES = ("N", "S", "E", "W")
 
     def __init__(self):
         #####################
         # Object Status Flags
-        self.sentence_active = False
-        self.active_segment = 0
-        self.process_crc = False
-        self.gps_segments = []
-        self.crc_xor = 0
-        self.char_count = 0
-        self.fix_time = 0
-
-        #####################
-        # Sentence Statistics
-        self.crc_fails = 0
-        self.clean_sentences = 0
-        self.parsed_sentences = 0
+        self.sentence_active: bool = False
+        self.active_segment: int = 0
+        self.process_crc: bool = False
+        self.gps_segments: list[str] = []
+        self.crc_xor: int = 0
+        self.char_count: int = 0
 
         #####################
         # Custom Data
-        self.utc_time = 0
-        self.lat = 0
-        self.lng = 0
+        self.utc_time: float = 0
+        self.lat: float = 0
+        self.lng: float = 0
 
-        self.valid = False
+        self.valid: bool = False
 
     ########################################
     # Sentence Parsers
     ########################################
-    def gprmc(self):
+    def gprmc(self) -> bool:
         """Parse Recommended Minimum Specific GPS/Transit data (RMC)Sentence.
         Updates UTC timestamp, latitude, longitude, Course, Speed, Date, and fix status
         """
@@ -60,6 +48,12 @@ class NMEAparser(object):
 
         # Check Receiver Data Valid Flag
         if self.gps_segments[2] == "A":  # Data from Receiver is Valid/Has Fix
+            if self.gps_segments[4] not in self.__HEMISPHERES:
+                return False
+
+            if self.gps_segments[6] not in self.__HEMISPHERES:
+                return False
+
             # Longitude / Latitude
             try:
                 # Latitude
@@ -76,17 +70,8 @@ class NMEAparser(object):
             except ValueError:
                 return False
 
-            if self.gps_segments[4] not in self.__HEMISPHERES:
-                return False
-
-            if self.gps_segments[6] not in self.__HEMISPHERES:
-                return False
-
             # Update Object Data
             self.valid = True
-
-            # Update Last Fix Time
-            self.new_fix_time()
 
         else:  # Clear Position Data if Sentence is 'Invalid'
             self.lat = 0
@@ -108,6 +93,12 @@ class NMEAparser(object):
 
         # Check Receiver Data Valid Flag
         if self.gps_segments[6] == "A":  # Data from Receiver is Valid/Has Fix
+            if self.gps_segments[2] not in self.__HEMISPHERES:
+                return False
+
+            if self.gps_segments[4] not in self.__HEMISPHERES:
+                return False
+
             # Longitude / Latitude
             try:
                 # Latitude
@@ -124,17 +115,8 @@ class NMEAparser(object):
             except ValueError:
                 return False
 
-            if self.gps_segments[2] not in self.__HEMISPHERES:
-                return False
-
-            if self.gps_segments[4] not in self.__HEMISPHERES:
-                return False
-
             # Update Object Data
             self.valid = True
-
-            # Update Last Fix Time
-            self.new_fix_time()
 
         else:  # Clear Position Data if Sentence is 'Invalid'
             self.lat = 0
@@ -160,6 +142,12 @@ class NMEAparser(object):
 
         # Process Location and Speed Data if Fix is GOOD
         if fix_stat:
+            if self.gps_segments[3] not in self.__HEMISPHERES:
+                return False
+
+            if self.gps_segments[5] not in self.__HEMISPHERES:
+                return False
+
             # Longitude / Latitude
             try:
                 # Latitude
@@ -176,23 +164,13 @@ class NMEAparser(object):
             except ValueError:
                 return False
 
-            if self.gps_segments[3] not in self.__HEMISPHERES:
-                return False
-
-            if self.gps_segments[5] not in self.__HEMISPHERES:
-                return False
-
-        # If Fix is GOOD, update fix timestamp
-        if fix_stat:
-            self.new_fix_time()
-
         return True
 
     ##########################################
     # Data Stream Handler Functions
     ##########################################
 
-    def new_sentence(self):
+    def new_sentence(self) -> None:
         """Adjust Object Flags in Preparation for a New Sentence"""
         self.gps_segments = [""]
         self.active_segment = 0
@@ -201,7 +179,7 @@ class NMEAparser(object):
         self.process_crc = True
         self.char_count = 0
 
-    def update(self, new_char):
+    def update(self, new_char) -> bool:
         """Process a new input char and updates GPS object if necessary based on special characters ('$', ',', '*')
         Function builds a list of received string that are validate by CRC prior to parsing by the  appropriate
         sentence function. Returns sentence type on successful parse, None otherwise"""
@@ -217,39 +195,38 @@ class NMEAparser(object):
             # Check if a new string is starting ($)
             if new_char == "$":
                 self.new_sentence()
-                return None
+                return False
 
             elif self.sentence_active:
                 # Check if sentence is ending (*)
-                if new_char == "*":
-                    self.process_crc = False
-                    self.active_segment += 1
-                    self.gps_segments.append("")
-                    return None
+                match new_char:
+                    case "*":
+                        self.process_crc = False
+                        self.active_segment += 1
+                        self.gps_segments.append("")
+                        return False
 
-                # Check if a section is ended (,), Create a new substring to feed
-                # characters to
-                elif new_char == ",":
-                    self.active_segment += 1
-                    self.gps_segments.append("")
+                    # Check if a section is ended (,), Create a new substring to feed
+                    # characters to
+                    case ",":
+                        self.active_segment += 1
+                        self.gps_segments.append("")
 
-                # Store All Other printable character and check CRC when ready
-                else:
-                    self.gps_segments[self.active_segment] += new_char
+                    # Store All Other printable character and check CRC when ready
+                    case _:
+                        self.gps_segments[self.active_segment] += new_char
 
-                    # When CRC input is disabled, sentence is nearly complete
-                    if not self.process_crc:
-                        if len(self.gps_segments[self.active_segment]) == 2:
-                            try:
-                                final_crc = int(
-                                    self.gps_segments[self.active_segment], 16
-                                )
-                                if self.crc_xor == final_crc:
-                                    valid_sentence = True
-                                else:
-                                    self.crc_fails += 1
-                            except ValueError:
-                                pass  # CRC Value was deformed and could not have been correct
+                        # When CRC input is disabled, sentence is nearly complete
+                        if not self.process_crc:
+                            if len(self.gps_segments[self.active_segment]) == 2:
+                                try:
+                                    final_crc = int(
+                                        self.gps_segments[self.active_segment], 16
+                                    )
+                                    if self.crc_xor == final_crc:
+                                        valid_sentence = True
+                                except ValueError:
+                                    pass  # CRC Value was deformed and could not have been correct
 
                 # Update CRC
                 if self.process_crc:
@@ -257,30 +234,20 @@ class NMEAparser(object):
 
                 # If a Valid Sentence Was received and it's a supported sentence, then parse it!!
                 if valid_sentence:
-                    self.clean_sentences += 1  # Increment clean sentences received
                     self.sentence_active = False  # Clear Active Processing Flag
 
                     if self.gps_segments[0] in self.supported_sentences:
                         # parse the Sentence Based on the message type, return True if parse is clean
                         if self.supported_sentences[self.gps_segments[0]](self):
                             # Let host know that the GPS object was updated by returning parsed sentence type
-                            self.parsed_sentences += 1
-                            return self.gps_segments[0]
+                            return True
 
                 # Check that the sentence buffer isn't filling up with Garage waiting for the sentence to complete
-                if self.char_count > self.SENTENCE_LIMIT:
+                if self.char_count > self.__NMEA_MAX_CHAR_COUNT:
                     self.sentence_active = False
 
         # Tell Host no new sentence was parsed
-        return None
-
-    def new_fix_time(self):
-        """Updates a high resolution counter with current time when fix is updated. Currently only triggered from
-        GGA, GSA and RMC sentences"""
-        try:
-            self.fix_time = utime.ticks_ms()
-        except NameError:
-            self.fix_time = time.time()
+        return False
 
     # All the currently supported NMEA sentences
     supported_sentences = {
