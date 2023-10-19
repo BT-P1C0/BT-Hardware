@@ -27,9 +27,9 @@ class Tracker(object):
         self.env = env
 
         self.__connectLED()
-        # self.__connectOLED()
-        self.__connectSIMmodule()
-        self.__connectGPSmodule()
+        self.__connectOLED()
+        assert self.__connectSIMmodule(), "SIM Module Connection Error"
+        assert self.__connectGPSmodule(), "GPS Module Connection Error"
 
         # Get battery status from SIM Module
         battChargeStatus, battLevel, battVoltage = self.simModule.batteryStatus()
@@ -75,7 +75,7 @@ class Tracker(object):
             print("OLED: OK")
             self.ledBlink(2, 0.1)
 
-    def __connectSIMmodule(self) -> None:
+    def __connectSIMmodule(self) -> bool:
         try:
             self.simModule = SIM800L(
                 Hardware.sim(),
@@ -88,12 +88,14 @@ class Tracker(object):
             self.display("SIM: ERROR")
             print(e)
             self.ledBlink(5, 0.1)
+            return False
 
         else:
             self.display("SIM: OK")
             self.ledBlink(2, 0.1)
+            return True
 
-    def __connectGPSmodule(self) -> None:
+    def __connectGPSmodule(self) -> bool:
         try:
             self.gpsModule = Hardware.gps()
 
@@ -102,11 +104,13 @@ class Tracker(object):
             print(e)
             self.ledBlink(5, 0.1)
             self.hardReset()
+            return False
 
         else:
             self.display("GPS: OK")
             self.ledBlink(2, 0.1)
             self.gpsParserObject = NMEAparser()
+            return True
 
     def getSignalStrength(self) -> None:
         self.RSSI, self.BER = self.simModule.getSignalStrength()

@@ -290,6 +290,11 @@ class SIM800L(object):
                     raise
             else:
                 break
+
+        # Check if SIM card is inserted
+        if self.execute(Commands.isSIMInserted()) != "+CSMINS: 0,1":
+            raise Exception("SIM card is not inserted")
+
         # Set initialized flag and support vars
         self.initialized = True
         # Check if SSL is supported
