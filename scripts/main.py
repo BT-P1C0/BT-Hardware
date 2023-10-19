@@ -76,22 +76,22 @@ class Tracker(object):
             self.ledBlink(2, 0.1)
 
     def __connectSIMmodule(self) -> None:
-        # try:
-        self.simModule = SIM800L(
-            Hardware.sim(),
-            Hardware.sim_rst(),
-            True,
-        )
-        assert self.simModule.initialize()
+        try:
+            self.simModule = SIM800L(
+                Hardware.sim(),
+                Hardware.sim_rst(),
+                True,
+            )
+            assert self.simModule.initialize()
 
-    # except Exception as e:
-    #     self.display("SIM: ERROR")
-    #     print(e)
-    #     self.ledBlink(5, 0.1)
+        except Exception as e:
+            self.display("SIM: ERROR")
+            print(e)
+            self.ledBlink(5, 0.1)
 
-    # else:
-    #     self.display("SIM: OK")
-    #     self.ledBlink(2, 0.1)
+        else:
+            self.display("SIM: OK")
+            self.ledBlink(2, 0.1)
 
     def __connectGPSmodule(self) -> None:
         try:

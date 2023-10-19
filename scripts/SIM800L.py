@@ -326,7 +326,7 @@ class SIM800L(object):
                     )
             else:
                 # Convert line to string
-                line_str: str = line
+                line_str: str = str(line, "UTF-8")
 
                 # Do we have an error?
                 if line_str == "ERROR\r\n":
