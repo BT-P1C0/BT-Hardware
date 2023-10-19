@@ -1,4 +1,3 @@
-import re
 import time
 from machine import Pin, UART, I2C, reset
 from NMEA import NMEAparser
@@ -28,7 +27,7 @@ class Tracker(object):
         self.env = env
 
         self.__connectLED()
-        self.__connectOLED()
+        # self.__connectOLED()
         self.__connectSIMmodule()
         self.__connectGPSmodule()
 
@@ -50,7 +49,7 @@ class Tracker(object):
 
     def __connectLED(self) -> None:
         try:
-            self.picoLed = Hardware.led
+            self.picoLed = Hardware.led()
 
         except Exception as e:
             print("LED: ERROR")
@@ -64,7 +63,7 @@ class Tracker(object):
             self.oled = SSD1306_I2C(
                 width=Hardware.oled_resolution[0],  # 128
                 height=Hardware.oled_resolution[1],  # 32
-                i2c=Hardware.oled,
+                i2c=Hardware.oled(),
             )
 
         except Exception as e:
@@ -77,25 +76,26 @@ class Tracker(object):
             self.ledBlink(2, 0.1)
 
     def __connectSIMmodule(self) -> None:
-        try:
-            self.simModule = SIM800L(
-                Hardware.sim,
-                Hardware.sim_rst,
-            )
-            assert self.simModule.initialize()
+        # try:
+        self.simModule = SIM800L(
+            Hardware.sim(),
+            Hardware.sim_rst(),
+            True,
+        )
+        assert self.simModule.initialize()
 
-        except Exception as e:
-            self.display("SIM: ERROR")
-            print(e)
-            self.ledBlink(5, 0.1)
+    # except Exception as e:
+    #     self.display("SIM: ERROR")
+    #     print(e)
+    #     self.ledBlink(5, 0.1)
 
-        else:
-            self.display("SIM: OK")
-            self.ledBlink(2, 0.1)
+    # else:
+    #     self.display("SIM: OK")
+    #     self.ledBlink(2, 0.1)
 
     def __connectGPSmodule(self) -> None:
         try:
-            self.gpsModule = Hardware.gps
+            self.gpsModule = Hardware.gps()
 
         except Exception as e:
             self.display("GPS: ERROR")
@@ -309,9 +309,9 @@ class Tracker(object):
 
 if __name__ == "__main__":
     print("Starting Bus Tracker")
-    try:
-        tracker: Tracker = Tracker()
-        tracker.start()
-    except Exception as e:
-        print("Main Exception", e)
-        reset()
+    # try:
+    tracker: Tracker = Tracker()
+    tracker.start()
+    # except Exception as e:
+    #     print("Main Exception", e)
+    #     reset()

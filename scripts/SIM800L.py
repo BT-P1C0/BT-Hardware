@@ -401,15 +401,14 @@ class SIM800L(object):
 
         battChargeStatus, battLevel, battVoltage = output.split(":")[1].split(",")
         # Map values to battery charge state
-        match int(battChargeStatus):
-            case 0:
-                battChargeStatus = "Not charging"
-            case 1:
-                battChargeStatus = "Charging"
-            case 2:
-                battChargeStatus = "Finished charging"
-            case _:
-                battChargeStatus = "Power fault"
+        if battChargeStatus == "0":
+            battChargeStatus = "Not charging"
+        elif battChargeStatus == "1":
+            battChargeStatus = "Charging"
+        elif battChargeStatus == "2":
+            battChargeStatus = "Finished charging"
+        else:
+            battChargeStatus = "Power fault"
 
         # More conversions
         battLevel = f"{battLevel}%"
@@ -460,25 +459,25 @@ class SIM800L(object):
         # 30 is the maximum value (2 is the minimum)
         RSSI = float(rssi) * 100 / float(30) if rssi != "99" else 99
         # RxQual to BER conversion
-        match int(rxQual):
-            case 0:
-                ber = "BER < 0.2%"
-            case 1:
-                ber = "0.2% < BER < 0.4%"
-            case 2:
-                ber = "0.4% < BER < 0.8%"
-            case 3:
-                ber = "0.8% < BER < 1.6%"
-            case 4:
-                ber = "1.6% < BER < 3.2%"
-            case 5:
-                ber = "3.2% < BER < 6.4%"
-            case 6:
-                ber = "6.4% < BER < 12.8%"
-            case 7:
-                ber = "12.8% < BER"
-            case _:
-                ber = f"99"
+        rxQual = int(rxQual)
+        if rxQual == 0:
+            ber = "BER < 0.2%"
+        elif rxQual == 1:
+            ber = "0.2% < BER < 0.4%"
+        elif rxQual == 2:
+            ber = "0.4% < BER < 0.8%"
+        elif rxQual == 3:
+            ber = "0.8% < BER < 1.6%"
+        elif rxQual == 4:
+            ber = "1.6% < BER < 3.2%"
+        elif rxQual == 5:
+            ber = "3.2% < BER < 6.4%"
+        elif rxQual == 6:
+            ber = "6.4% < BER < 12.8%"
+        elif rxQual == 7:
+            ber = "12.8% < BER"
+        else:
+            ber = f"99"
 
         return RSSI, ber
 
@@ -593,19 +592,18 @@ class SIM800L(object):
         # Set url
         self.execute(Commands.setHTTPParameterURL(url))
 
-        match method:
-            case "GET":
-                # GET
-                output = self.execute(Commands.HTTPActionGET())
-            case "POST":
-                # Send data
-                self.execute(Commands.setHTTPParameterContent(contentType))
-                self.execute(Commands.HTTPData(len(data)))
-                self.execute(Commands.dumpData(data))
-                # POST
-                output = self.execute(Commands.HTTPActionPOST())
-            case _:
-                raise Exception(f'Unsupported HTTP method "{method}"')
+        if method == "GET":
+            # GET
+            output = self.execute(Commands.HTTPActionGET())
+        elif method == "POST":
+            # Send data
+            self.execute(Commands.setHTTPParameterContent(contentType))
+            self.execute(Commands.HTTPData(len(data)))
+            self.execute(Commands.dumpData(data))
+            # POST
+            output = self.execute(Commands.HTTPActionPOST())
+        else:
+            raise Exception(f'Unsupported HTTP method "{method}"')
 
         return Response(
             status_code=output.split(",")[1],

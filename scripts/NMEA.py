@@ -199,34 +199,33 @@ class NMEAparser(object):
 
             elif self.sentence_active:
                 # Check if sentence is ending (*)
-                match new_char:
-                    case "*":
-                        self.process_crc = False
-                        self.active_segment += 1
-                        self.gps_segments.append("")
-                        return False
+                if new_char == "*":
+                    self.process_crc = False
+                    self.active_segment += 1
+                    self.gps_segments.append("")
+                    return False
 
-                    # Check if a section is ended (,), Create a new substring to feed
-                    # characters to
-                    case ",":
-                        self.active_segment += 1
-                        self.gps_segments.append("")
+                # Check if a section is ended (,), Create a new substring to feed
+                # characters to
+                elif new_char == ",":
+                    self.active_segment += 1
+                    self.gps_segments.append("")
 
-                    # Store All Other printable character and check CRC when ready
-                    case _:
-                        self.gps_segments[self.active_segment] += new_char
+                # Store All Other printable character and check CRC when ready
+                else:
+                    self.gps_segments[self.active_segment] += new_char
 
-                        # When CRC input is disabled, sentence is nearly complete
-                        if not self.process_crc:
-                            if len(self.gps_segments[self.active_segment]) == 2:
-                                try:
-                                    final_crc = int(
-                                        self.gps_segments[self.active_segment], 16
-                                    )
-                                    if self.crc_xor == final_crc:
-                                        valid_sentence = True
-                                except ValueError:
-                                    pass  # CRC Value was deformed and could not have been correct
+                    # When CRC input is disabled, sentence is nearly complete
+                    if not self.process_crc:
+                        if len(self.gps_segments[self.active_segment]) == 2:
+                            try:
+                                final_crc = int(
+                                    self.gps_segments[self.active_segment], 16
+                                )
+                                if self.crc_xor == final_crc:
+                                    valid_sentence = True
+                            except ValueError:
+                                pass  # CRC Value was deformed and could not have been correct
 
                 # Update CRC
                 if self.process_crc:
