@@ -20,7 +20,7 @@ class TimeoutError(Exception):
     pass
 
 
-httpaction_status_codes = {
+httpaction_status_codes: dict[str, str] = {
     "000": "Unknown HTTPACTION error",
     "100": "Continue",
     "101": "Switching Protocols",
