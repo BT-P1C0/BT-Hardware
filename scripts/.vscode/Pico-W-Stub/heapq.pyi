@@ -1,7 +1,7 @@
 """
 Heap queue algorithm.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/heapq.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/heapq.html
 
 CPython module: :mod:`python:heapq` https://docs.python.org/3/library/heapq.html .
 
@@ -11,8 +11,7 @@ This module implements the
 A heap queue is essentially a list that has its elements stored in such a way
 that the first item of the list is always the smallest.
 """
-from typing import Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
 
 def heappop(heap) -> Incomplete:
     """

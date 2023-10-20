@@ -1,15 +1,15 @@
 """
 Wait for events on a set of streams.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/select.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/select.html
 
 CPython module: :mod:`python:select` https://docs.python.org/3/library/select.html .
 
 This module provides functions to efficiently wait for events on multiple
 `streams <stream>` (select streams which are ready for operations).
 """
-from typing import Iterator, List, Optional, Tuple, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, Iterator, List, Optional, Tuple
 
 POLLOUT: int
 POLLIN: int

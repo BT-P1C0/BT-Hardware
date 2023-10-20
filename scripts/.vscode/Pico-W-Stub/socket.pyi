@@ -1,7 +1,7 @@
 """
 Socket module.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/socket.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/socket.html
 
 CPython module: :mod:`python:socket` https://docs.python.org/3/library/socket.html .
 
@@ -15,23 +15,24 @@ Difference to CPython
    by MicroPython (but is a no-op), so where compatibility with CPython matters,
    be sure to use it.
 """
-from typing import IO, Optional, Tuple, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
 from stdlib.socket import *
+from typing import Any, IO, Optional, Tuple
 
+SOCK_STREAM: int
 SOCK_RAW: int
 SOCK_DGRAM: int
-SO_REUSEADDR: int
-SOCK_STREAM: int
 SOL_SOCKET: int
+SO_BROADCAST: int
+SO_REUSEADDR: int
 AF_INET6: int
 AF_INET: int
 IP_DROP_MEMBERSHIP: int
 IPPROTO_IP: int
 IP_ADD_MEMBERSHIP: int
 
-def reset(*args, **kwargs) -> Any: ...
-def print_pcbs(*args, **kwargs) -> Any: ...
+def reset(*args, **kwargs) -> Incomplete: ...
+def print_pcbs(*args, **kwargs) -> Incomplete: ...
 def getaddrinfo(host, port, af=0, type=0, proto=0, flags=0, /) -> Incomplete:
     """
     Translate the host/port argument into a sequence of 5-tuples that contain all the
@@ -73,7 +74,7 @@ def getaddrinfo(host, port, af=0, type=0, proto=0, flags=0, /) -> Incomplete:
     """
     ...
 
-def callback(*args, **kwargs) -> Any: ...
+def callback(*args, **kwargs) -> Incomplete: ...
 
 class socket:
     """

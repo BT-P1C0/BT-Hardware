@@ -1,7 +1,7 @@
 """
 Network configuration.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/network.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/network.html
 
 This module provides network drivers and routing configuration. To use this
 module, a MicroPython variant/build with network capabilities must be installed.
@@ -33,8 +33,8 @@ For example::
     data = s.recv(1000)
     s.close()
 """
-from typing import List, Optional, Tuple, Union, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, List, Optional, Tuple, Union
 
 STA_IF: int
 STAT_IDLE: int
@@ -45,9 +45,9 @@ AP_IF: int
 STAT_CONNECTING: int
 STAT_CONNECT_FAIL: int
 
-def route(*args, **kwargs) -> Any: ...
-def hostname(*args, **kwargs) -> Any: ...
-def country(*args, **kwargs) -> Any: ...
+def route(*args, **kwargs) -> Incomplete: ...
+def hostname(*args, **kwargs) -> Incomplete: ...
+def country(*args, **kwargs) -> Incomplete: ...
 
 class WLAN:
     """
@@ -58,6 +58,9 @@ class WLAN:
     For example, only STA interface may `WLAN.connect()` to an access point.
     """
 
+    PM_PERFORMANCE: int
+    PM_POWERSAVE: int
+    PM_NONE: int
     def isconnected(self) -> bool:
         """
         In case of STA mode, returns ``True`` if connected to a WiFi access
@@ -65,7 +68,7 @@ class WLAN:
         station is connected. Returns ``False`` otherwise.
         """
         ...
-    def ioctl(self, *args, **kwargs) -> Any: ...
+    def ioctl(self, *args, **kwargs) -> Incomplete: ...
     def ifconfig(self, configtuple: Optional[Any] = None) -> Tuple:
         """
         Get/set IP-level network interface parameters: IP address, subnet mask,
@@ -104,7 +107,7 @@ class WLAN:
             * 1 -- hidden
         """
         ...
-    def send_ethernet(self, *args, **kwargs) -> Any: ...
+    def send_ethernet(self, *args, **kwargs) -> Incomplete: ...
     def status(self, param: Optional[Any] = None) -> Incomplete:
         """
         Return the current status of the wireless connection.
@@ -153,6 +156,7 @@ class WLAN:
         hostname       The hostname that will be sent to DHCP (STA interfaces) and mDNS (if supported, both STA and AP). (Deprecated, use :func:`network.hostname` instead)
         reconnects     Number of reconnect attempts to make (integer, 0=none, -1=unlimited)
         txpower        Maximum transmit power in dBm (integer or float)
+        pm             WiFi Power Management setting (see below for allowed values)
         =============  ===========
         """
         ...
@@ -176,5 +180,5 @@ class WLAN:
         in this case).
         """
         ...
-    def deinit(self, *args, **kwargs) -> Any: ...
+    def deinit(self, *args, **kwargs) -> Incomplete: ...
     def __init__(self, interface_id) -> None: ...

@@ -1,7 +1,7 @@
 """
 Pack and unpack primitive data types.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/struct.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/struct.html
 
 CPython module: :mod:`python:struct` https://docs.python.org/3/library/struct.html .
 
@@ -53,8 +53,8 @@ The following data types are supported:
 | P      | void *             | integer           |               |
 +--------+--------------------+-------------------+---------------+
 """
-from typing import Tuple, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Tuple
 
 def pack_into(fmt, buffer, offset, v1, *args, **kwargs) -> Incomplete:
     """

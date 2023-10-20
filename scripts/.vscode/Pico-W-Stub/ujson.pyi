@@ -1,15 +1,14 @@
 """
 JSON encoding and decoding.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/json.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/json.html
 
 CPython module: :mod:`python:json` https://docs.python.org/3/library/json.html .
 
 This modules allows to convert between Python objects and the JSON
 data format.
 """
-from typing import Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
 
 def loads(str) -> Incomplete:
     """

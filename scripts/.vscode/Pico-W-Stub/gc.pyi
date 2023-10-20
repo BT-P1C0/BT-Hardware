@@ -1,16 +1,16 @@
 """
 Control the garbage collector.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/gc.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/gc.html
 
 CPython module: :mod:`python:gc` https://docs.python.org/3/library/gc.html .
 """
-from typing import Optional, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, Optional
 
 def mem_alloc() -> int:
     """
-    Return the number of bytes of heap RAM that are allocated.
+    Return the number of bytes of heap RAM that are allocated by Python code.
 
     Difference to CPython
 
@@ -18,11 +18,11 @@ def mem_alloc() -> int:
     """
     ...
 
-def isenabled(*args, **kwargs) -> Any: ...
+def isenabled(*args, **kwargs) -> Incomplete: ...
 def mem_free() -> int:
     """
-    Return the number of bytes of available heap RAM, or -1 if this amount
-    is not known.
+    Return the number of bytes of heap RAM that is available for Python
+    code to allocate, or -1 if this amount is not known.
 
     Difference to CPython
 

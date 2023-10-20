@@ -1,7 +1,7 @@
 """
 Time related functions.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/time.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/time.html
 
 CPython module: :mod:`python:time` https://docs.python.org/3/library/time.html .
 
@@ -32,8 +32,8 @@ If actual calendar time is not maintained with a system/MicroPython RTC,
 functions below which require reference to current absolute time may
 behave not as expected.
 """
-from typing import Optional, Tuple, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, Optional, Tuple
 
 def ticks_diff(ticks1, ticks2) -> int:
     """
@@ -45,8 +45,8 @@ def ticks_diff(ticks1, ticks2) -> int:
     However, values returned by `ticks_ms()`, etc. functions may wrap around, so
     directly using subtraction on them will produce incorrect result. That is why
     `ticks_diff()` is needed, it implements modular (or more specifically, ring)
-    arithmetics to produce correct result even for wrap-around values (as long as they not
-    too distant inbetween, see below). The function returns **signed** value in the range
+    arithmetic to produce correct result even for wrap-around values (as long as they not
+    too distant in between, see below). The function returns **signed** value in the range
     [*-TICKS_PERIOD/2* .. *TICKS_PERIOD/2-1*] (that's a typical range definition for
     two's-complement signed binary integers). If the result is negative, it means that
     *ticks1* occurred earlier in time than *ticks2*. Otherwise, it means that
@@ -65,7 +65,7 @@ def ticks_diff(ticks1, ticks2) -> int:
     has passed. To avoid this mistake, just look at the clock regularly. Your application
     should do the same. "Too long sleep" metaphor also maps directly to application
     behaviour: don't let your application run any single task for too long. Run tasks
-    in steps, and do time-keeping inbetween.
+    in steps, and do time-keeping in between.
 
     `ticks_diff()` is designed to accommodate various usage patterns, among them:
 

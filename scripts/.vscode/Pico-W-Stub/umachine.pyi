@@ -1,7 +1,7 @@
 """
 Functions related to the hardware.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/machine.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/machine.html
 
 The ``machine`` module contains specific functions related to the hardware
 on a particular board. Most functions in this module allow to achieve direct
@@ -10,13 +10,13 @@ and unrestricted access to and control of hardware blocks on a system
 malfunction, lockups, crashes of your board, and in extreme cases, hardware
 damage.
 """
-from typing import Callable, List, NoReturn, Optional, Tuple, Union, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, Callable, List, NoReturn, Optional, Tuple, Union
 
 WDT_RESET: int
 PWRON_RESET: int
 
-def dht_readinto(*args, **kwargs) -> Any: ...
+def dht_readinto(*args, **kwargs) -> Incomplete: ...
 def enable_irq(state) -> Incomplete:
     """
     Re-enable interrupt requests.
@@ -188,9 +188,8 @@ class WDT:
     Create a WDT object and start it. The timeout must be given in milliseconds.
     Once it is running the timeout cannot be changed and the WDT cannot be stopped either.
 
-    Notes: On the esp32 the minimum timeout is 1 second. On the esp8266 a timeout
-    cannot be specified, it is determined by the underlying system. On rp2040 devices,
-    the maximum timeout is 8388 ms.
+    Notes: On the esp8266 a timeout cannot be specified, it is determined by the underlying system.
+    On rp2040 devices, the maximum timeout is 8388 ms.
     """
 
     def feed(self) -> None:
@@ -202,9 +201,9 @@ class WDT:
         ...
     def __init__(self, id=0, timeout=5000) -> None: ...
 
-mem8: Any
-mem32: Any
-mem16: Any
+mem8: Incomplete
+mem32: Incomplete
+mem16: Incomplete
 
 class PWM:
     """
@@ -217,12 +216,25 @@ class PWM:
          PWM cycle.
        - *duty_u16* sets the duty cycle as a ratio ``duty_u16 / 65535``.
        - *duty_ns* sets the pulse width in nanoseconds.
+       - *invert*  inverts the respective output if the value is True
 
     Setting *freq* may affect other PWM objects if the objects share the same
     underlying PWM generator (this is hardware specific).
     Only one of *duty_u16* and *duty_ns* should be specified at a time.
+    *invert* is not available at all ports.
     """
 
+    def duty_u16(self, value: Optional[Any] = None) -> int:
+        """
+        Get or set the current duty cycle of the PWM output, as an unsigned 16-bit
+        value in the range 0 to 65535 inclusive.
+
+        With no arguments the duty cycle is returned.
+
+        With a single *value* argument the duty cycle is set to that value, measured
+        as the ratio ``value / 65535``.
+        """
+        ...
     def freq(self, value: Optional[Any] = None) -> Incomplete:
         """
         Get or set the current frequency of the PWM output.
@@ -233,15 +245,10 @@ class PWM:
         method may raise a ``ValueError`` if the frequency is outside the valid range.
         """
         ...
-    def duty_u16(self, value: Optional[Any] = None) -> int:
+    def init(self, *, freq, duty_u16, duty_ns) -> None:
         """
-        Get or set the current duty cycle of the PWM output, as an unsigned 16-bit
-        value in the range 0 to 65535 inclusive.
-
-        With no arguments the duty cycle is returned.
-
-        With a single *value* argument the duty cycle is set to that value, measured
-        as the ratio ``value / 65535``.
+        Modify settings for the PWM object.  See the above constructor for details
+        about the parameters.
         """
         ...
     def duty_ns(self, value: Optional[Any] = None) -> int:
@@ -258,7 +265,7 @@ class PWM:
         Disable the PWM output.
         """
         ...
-    def __init__(self, dest, *, freq=0, duty=0, duty_u16=0, duty_ns=0) -> None: ...
+    def __init__(self, dest, *, freq=0, duty=0, duty_u16=0, duty_ns=0, invert=False) -> None: ...
 
 class ADC:
     """
@@ -403,7 +410,7 @@ class I2C:
            - *freq* is the SCL clock rate
 
          In the case of hardware I2C the actual clock frequency may be lower than the
-         requested frequency. This is dependant on the platform hardware. The actual
+         requested frequency. This is dependent on the platform hardware. The actual
          rate may be determined by printing the I2C object.
         """
         ...
@@ -450,7 +457,7 @@ class I2S:
       - ``ibuf`` specifies internal buffer length (bytes)
 
     For all ports, DMA runs continuously in the background and allows user applications to perform other operations while
-    sample data is transfered between the internal buffer and the I2S peripheral unit.
+    sample data is transferred between the internal buffer and the I2S peripheral unit.
     Increasing the size of the internal buffer has the potential to increase the time that user applications can perform non-I2S operations
     before underflow (e.g. ``write`` method) or overflow (e.g. ``readinto`` method).
     """
@@ -634,7 +641,7 @@ class Pin:
         The following methods are not part of the core Pin API and only implemented on certain ports.
         """
         ...
-    def toggle(self, *args, **kwargs) -> Any: ...
+    def toggle(self, *args, **kwargs) -> Incomplete: ...
     def off(self) -> None:
         """
         Set pin to "0" output level.
@@ -696,72 +703,72 @@ class Pin:
         ...
 
     class cpu:
-        GPIO20: Any
-        GPIO25: Any
-        GPIO26: Any
-        GPIO27: Any
-        GPIO24: Any
-        GPIO21: Any
-        GPIO22: Any
-        GPIO23: Any
-        GPIO28: Any
-        GPIO6: Any
-        GPIO7: Any
-        GPIO8: Any
-        GPIO5: Any
-        GPIO29: Any
-        GPIO3: Any
-        GPIO4: Any
-        GPIO9: Any
-        GPIO2: Any
-        GPIO1: Any
-        GPIO10: Any
-        GPIO11: Any
-        GPIO0: Any
-        EXT_GPIO0: Any
-        EXT_GPIO1: Any
-        EXT_GPIO2: Any
-        GPIO12: Any
-        GPIO17: Any
-        GPIO18: Any
-        GPIO19: Any
-        GPIO16: Any
-        GPIO13: Any
-        GPIO14: Any
-        GPIO15: Any
+        GPIO20: Incomplete
+        GPIO25: Incomplete
+        GPIO26: Incomplete
+        GPIO27: Incomplete
+        GPIO24: Incomplete
+        GPIO21: Incomplete
+        GPIO22: Incomplete
+        GPIO23: Incomplete
+        GPIO28: Incomplete
+        GPIO6: Incomplete
+        GPIO7: Incomplete
+        GPIO8: Incomplete
+        GPIO5: Incomplete
+        GPIO29: Incomplete
+        GPIO3: Incomplete
+        GPIO4: Incomplete
+        GPIO9: Incomplete
+        GPIO2: Incomplete
+        GPIO1: Incomplete
+        GPIO10: Incomplete
+        GPIO11: Incomplete
+        GPIO0: Incomplete
+        EXT_GPIO0: Incomplete
+        EXT_GPIO1: Incomplete
+        EXT_GPIO2: Incomplete
+        GPIO12: Incomplete
+        GPIO17: Incomplete
+        GPIO18: Incomplete
+        GPIO19: Incomplete
+        GPIO16: Incomplete
+        GPIO13: Incomplete
+        GPIO14: Incomplete
+        GPIO15: Incomplete
         def __init__(self, *argv, **kwargs) -> None: ...
 
     class board:
-        GP3: Any
-        GP28: Any
-        GP4: Any
-        GP5: Any
-        GP22: Any
-        GP27: Any
-        GP26: Any
-        WL_GPIO2: Any
-        WL_GPIO0: Any
-        LED: Any
-        WL_GPIO1: Any
-        GP6: Any
-        GP7: Any
-        GP9: Any
-        GP8: Any
-        GP12: Any
-        GP11: Any
-        GP13: Any
-        GP14: Any
-        GP0: Any
-        GP10: Any
-        GP1: Any
-        GP21: Any
-        GP2: Any
-        GP19: Any
-        GP20: Any
-        GP15: Any
-        GP16: Any
-        GP18: Any
-        GP17: Any
+        GP3: Incomplete
+        GP28: Incomplete
+        GP4: Incomplete
+        GP5: Incomplete
+        GP22: Incomplete
+        GP27: Incomplete
+        GP26: Incomplete
+        WL_GPIO2: Incomplete
+        WL_GPIO0: Incomplete
+        LED: Incomplete
+        WL_GPIO1: Incomplete
+        GP6: Incomplete
+        GP7: Incomplete
+        GP9: Incomplete
+        GP8: Incomplete
+        GP12: Incomplete
+        GP11: Incomplete
+        GP13: Incomplete
+        GP14: Incomplete
+        GP0: Incomplete
+        GP10: Incomplete
+        GP1: Incomplete
+        GP21: Incomplete
+        GP2: Incomplete
+        GP19: Incomplete
+        GP20: Incomplete
+        GP15: Incomplete
+        GP16: Incomplete
+        GP18: Incomplete
+        GP17: Incomplete
         def __init__(self, *argv, **kwargs) -> None: ...
 
     def __init__(self, id, mode=-1, pull=-1, *, value=None, drive=0, alt=-1) -> None: ...
@@ -782,12 +789,12 @@ class SoftSPI:
 
     LSB: int
     MSB: int
-    def deinit(self, *args, **kwargs) -> Any: ...
-    def init(self, *args, **kwargs) -> Any: ...
-    def write_readinto(self, *args, **kwargs) -> Any: ...
-    def read(self, *args, **kwargs) -> Any: ...
-    def write(self, *args, **kwargs) -> Any: ...
-    def readinto(self, *args, **kwargs) -> Any: ...
+    def deinit(self, *args, **kwargs) -> Incomplete: ...
+    def init(self, *args, **kwargs) -> Incomplete: ...
+    def write_readinto(self, *args, **kwargs) -> Incomplete: ...
+    def read(self, *args, **kwargs) -> Incomplete: ...
+    def write(self, *args, **kwargs) -> Incomplete: ...
+    def readinto(self, *args, **kwargs) -> Incomplete: ...
     def __init__(self, baudrate=500000, *, polarity=0, phase=0, bits=8, firstbit=MSB, sck=None, mosi=None, miso=None) -> None: ...
 
 class Timer:
@@ -836,7 +843,7 @@ class Timer:
           - ``callback`` - The callable to call upon expiration of the timer period.
             The callback must take one argument, which is passed the Timer object.
             The ``callback`` argument shall be specified. Otherwise an exception
-            will occurr upon timer expiration:
+            will occur upon timer expiration:
             ``TypeError: 'NoneType' object isn't callable``
         """
         ...
@@ -1016,19 +1023,19 @@ class SoftI2C(I2C):
          which an ``OSError(ETIMEDOUT)`` exception is raised.
     """
 
-    def readfrom_mem_into(self, *args, **kwargs) -> Any: ...
-    def readfrom_into(self, *args, **kwargs) -> Any: ...
-    def readfrom_mem(self, *args, **kwargs) -> Any: ...
-    def writeto_mem(self, *args, **kwargs) -> Any: ...
-    def scan(self, *args, **kwargs) -> Any: ...
-    def writeto(self, *args, **kwargs) -> Any: ...
-    def writevto(self, *args, **kwargs) -> Any: ...
-    def start(self, *args, **kwargs) -> Any: ...
-    def readfrom(self, *args, **kwargs) -> Any: ...
-    def readinto(self, *args, **kwargs) -> Any: ...
-    def init(self, *args, **kwargs) -> Any: ...
-    def stop(self, *args, **kwargs) -> Any: ...
-    def write(self, *args, **kwargs) -> Any: ...
+    def readfrom_mem_into(self, *args, **kwargs) -> Incomplete: ...
+    def readfrom_into(self, *args, **kwargs) -> Incomplete: ...
+    def readfrom_mem(self, *args, **kwargs) -> Incomplete: ...
+    def writeto_mem(self, *args, **kwargs) -> Incomplete: ...
+    def scan(self, *args, **kwargs) -> Incomplete: ...
+    def writeto(self, *args, **kwargs) -> Incomplete: ...
+    def writevto(self, *args, **kwargs) -> Incomplete: ...
+    def start(self, *args, **kwargs) -> Incomplete: ...
+    def readfrom(self, *args, **kwargs) -> Incomplete: ...
+    def readinto(self, *args, **kwargs) -> Incomplete: ...
+    def init(self, *args, **kwargs) -> Incomplete: ...
+    def stop(self, *args, **kwargs) -> Incomplete: ...
+    def write(self, *args, **kwargs) -> Incomplete: ...
     def __init__(self, scl, sda, *, freq=400000, timeout=50000) -> None: ...
 
 class RTC:
@@ -1093,7 +1100,7 @@ class SPI:
             specify them as a tuple of ``pins`` parameter.
 
         In the case of hardware SPI the actual clock frequency may be lower than the
-        requested baudrate. This is dependant on the platform hardware. The actual
+        requested baudrate. This is dependent on the platform hardware. The actual
         rate may be determined by printing the SPI object.
         """
         ...

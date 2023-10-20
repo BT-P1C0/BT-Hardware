@@ -1,7 +1,7 @@
 """
 Hashing algorithms.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/hashlib.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/hashlib.html
 
 CPython module: :mod:`python:hashlib` https://docs.python.org/3/library/hashlib.html .
 
@@ -23,16 +23,16 @@ be implemented:
   selected boards, targeting interoperability with legacy applications,
   will offer this.
 """
-from typing import Optional, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Any, Optional
 
 class sha256:
     """
     Create an SHA256 hasher object and optionally feed ``data`` into it.
     """
 
-    def digest(self, *args, **kwargs) -> Any: ...
-    def update(self, *args, **kwargs) -> Any: ...
+    def digest(self, *args, **kwargs) -> Incomplete: ...
+    def update(self, *args, **kwargs) -> Incomplete: ...
     def __init__(self, data: Optional[Any] = None) -> None: ...
 
 class sha1:
@@ -40,6 +40,6 @@ class sha1:
     Create an SHA1 hasher object and optionally feed ``data`` into it.
     """
 
-    def digest(self, *args, **kwargs) -> Any: ...
-    def update(self, *args, **kwargs) -> Any: ...
+    def digest(self, *args, **kwargs) -> Incomplete: ...
+    def update(self, *args, **kwargs) -> Incomplete: ...
     def __init__(self, data: Optional[Any] = None) -> None: ...

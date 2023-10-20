@@ -1,7 +1,7 @@
 """
 Mathematical functions for complex numbers.
 
-MicroPython module: https://docs.micropython.org/en/v1.20.0/library/cmath.html
+MicroPython module: https://docs.micropython.org/en/v1.21.0/library/cmath.html
 
 CPython module: :mod:`python:cmath` https://docs.python.org/3/library/cmath.html .
 
@@ -11,8 +11,8 @@ working with complex numbers.
 Availability: not available on WiPy and ESP8266. Floating point support
 required for this module.
 """
-from typing import Tuple, Any
-from _typeshed import Incomplete
+from _typeshed import Incomplete, Incomplete as Incomplete
+from typing import Tuple
 
 e: float
 pi: float
