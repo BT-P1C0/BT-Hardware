@@ -43,8 +43,15 @@ def debugPostUrl():
     return f"http://ps.pndsn.com/publish/{env.pubnub.pk}/{env.pubnub.sk}/0/debug_channel/0/?uuid={env.id.uuid}"
 
 
-def debugPostPayload(status: str, RSSI):
-    payload = {"bus": env.id.busNo, "status": status, "RSSI": RSSI}
+def debugPostPayload(status: str, RSSI, lat: float, lng: float, time: str):
+    payload = {
+        "bus": env.id.busNo,
+        "status": status,
+        "rssi": RSSI,
+        "lat": lat,
+        "lng": lng,
+        "time": time,
+    }
     return json.dumps(payload)
 
 

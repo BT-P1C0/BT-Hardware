@@ -20,7 +20,7 @@ class Tracker(object):
     gpsParserObject: NMEAparser
     lastDisplayedText: str = ""
     httpUrl: str = ""
-    lat, lng, utc = 0, 0, 0
+    lat, lng, utc_time = 0, 0, 0
     RISSI, BER = 0, 0
 
     def __init__(self) -> None:
@@ -115,6 +115,13 @@ class Tracker(object):
     def getSignalStrength(self) -> None:
         self.RSSI, self.BER = self.simModule.getSignalStrength()
 
+    def checkNetworkRegistered(self) -> None:
+        while x := self.simModule.networkRegisterationStatus():
+            self.display(x[2])
+            if x[0] == True:
+                return
+            time.sleep(1)
+
     def connectToInternet(self) -> None:
         self.display(
             "Connecting to internet...",
@@ -179,7 +186,9 @@ class Tracker(object):
             print("Display exception", e)
 
     def onlineDebugMessage(self, retry: bool = True) -> None:
+        gsmLocation = self.simModule.getGsmLocation()
         failedRequests = 0
+
         while True:
             if failedRequests > 10:
                 self.hardReset()
@@ -192,7 +201,13 @@ class Tracker(object):
                 response = self.simModule.makeHTTPRequest(
                     method="POST",
                     url=url,
-                    data=debugPostPayload(status="online", RSSI=self.RSSI),
+                    data=debugPostPayload(
+                        status="online",
+                        RSSI=self.RSSI,
+                        lat=gsmLocation.lat,
+                        lng=gsmLocation.lng,
+                        time=gsmLocation.time,
+                    ),
                 )
 
                 self.picoLed.value(0)
@@ -276,15 +291,15 @@ class Tracker(object):
             if data := self.gpsModule.read(1):
                 try:
                     if self.gpsParserObject.update(data.decode("ASCII")):
-                        if self.gpsParserObject.utc_time:
+                        if self.gpsParserObject.utc_time_time:
                             if self.gpsParserObject.lat and self.gpsParserObject.lng:
                                 self.lat = self.gpsParserObject.lat
                                 self.lng = self.gpsParserObject.lng
-                                self.utc = self.gpsParserObject.utc_time
+                                self.utc_time = self.gpsParserObject.utc_time_time
                                 self.httpUrl = httpGetUrl(
                                     self.lat,
                                     self.lng,
-                                    self.utc,
+                                    self.utc_time,
                                 )
                             else:
                                 self.display("GPS: No Location Fix")

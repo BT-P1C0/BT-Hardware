@@ -20,7 +20,23 @@ class TimeoutError(Exception):
     pass
 
 
-httpaction_status_codes: dict[str, str] = {
+network_registration: dict[str, str] = {
+    "0": "Not registered, MT is not currently searching a new operator to register to",
+    "1": "Registered, home network",
+    "2": "Not registered, but MT is currently searching a new operator to register to",
+    "3": "Registration denied",
+    "4": "Unknown",
+    "5": "Registered, roaming",
+}
+
+apn_list: dict[str, str] = {
+    "airtel": "airtelgprs.com",
+    "bsnl": "bsnlnet",
+    "idea": "internet",
+    "jio": "jionet",
+}
+
+http_action_status_codes: dict[str, str] = {
     "000": "Unknown HTTPACTION error",
     "100": "Continue",
     "101": "Switching Protocols",
@@ -72,11 +88,37 @@ httpaction_status_codes: dict[str, str] = {
 }
 
 
+class LocationResponse(object):
+    def __init__(
+        self, code: int, lat: float, lng: float, acc: int, date: str, time: str
+    ) -> None:
+        self.code: int = code
+        self.lat: float = lat
+        self.lng: float = lng
+        self.acc: int = acc
+        self.date: str = date
+        self.time: str = time
+
+    def __str__(self) -> str:
+        return f"LocationResponse({self.code}, {self.lat}, {self.lng}, {self.acc}, {self.date}, {self.time})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 class Response(object):
     def __init__(self, status_code, content) -> None:
         self.status_code: int = int(status_code)
-        self.status: str = httpaction_status_codes.get(str(self.status_code), "Unknown")
+        self.status: str = http_action_status_codes.get(
+            str(self.status_code), "Unknown"
+        )
         self.content: str = content
+
+    def __str__(self) -> str:
+        return f"Response({self.status_code}, {self.status}, {self.content})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class ATCommand(object):
@@ -85,6 +127,12 @@ class ATCommand(object):
         self.timeout: int = timeout
         self.end: str = end
 
+    def __str__(self) -> str:
+        return f'ATCommand("{self.string}", {self.timeout}, "{self.end}")'
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 
 class Network(object):
     def __init__(self, name: str, shortname: str, id: str) -> None:
@@ -92,11 +140,46 @@ class Network(object):
         self.shortname: str = shortname
         self.id: str = id
 
+    def __str__(self) -> str:
+        return f"Network({self.name}, {self.shortname}, {self.id})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class CellInfo(object):
+    def __init__(
+        self,
+        operator: str,
+        mcc: int,
+        mnc: int,
+        rxlev: int,
+        cellId: int,
+        afcn: int,
+        lac: int,
+        bsic: int,
+    ):
+        self.operator: str = operator
+        self.mcc: int = mcc
+        self.mnc: int = mnc
+        self.lac: int = lac
+        self.cellId: int = cellId
+        self.bsic: int = bsic
+        self.rxlev: int = rxlev
+        self.afcn: int = afcn
+
+    def __str__(self):
+        return f"CellInfo(Operator: {self.operator}, MCC: {self.mcc}, MNC: {self.mnc}, LAC: {self.lac}, CellId: {self.cellId}, BSIC: {self.bsic}, RXLEV: {self.rxlev}, AFCN: {self.afcn})"
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Commands(object):
     # sources:
     # https://cdn-shop.adafruit.com/datasheets/sim800_series_at_command_manual_v1.01.pdf
     # https://www.elecrow.com/wiki/images/2/20/SIM800_Series_AT_Command_Manual_V1.09.pdf
+    # https://www.avnet.com/wps/wcm/connect/onesite/5ddc2831-b698-44ac-92f5-50d79a14cb3f/Heracles-SIMCOM_GSM+Location_Application+Note_V1.02.pdf?MOD=AJPERES&CVID=m31n15G&CVID=m31n15G&CVID=m31jwAj&CVID=m31jwAj
     @staticmethod
     def enableErrorCodes() -> ATCommand:
         """Report Mobile Equipment Error"""
@@ -118,11 +201,6 @@ class Commands(object):
         return ATCommand("AT+CSMINS?", 3, "OK")
 
     @staticmethod
-    def isNetworkRegistered() -> ATCommand:
-        """Check if network is registered"""
-        return ATCommand("AT+CREG?", 3, "OK")
-
-    @staticmethod
     def batteryCharge() -> ATCommand:
         """Battery Charge"""
         return ATCommand("AT+CBC", 3, "OK")
@@ -140,6 +218,16 @@ class Commands(object):
     def readOpeartorNames() -> ATCommand:
         """Read Operator Names"""
         return ATCommand("AT+COPN", 60, "OK")
+
+    @staticmethod
+    def scanCellInfo() -> ATCommand:
+        """Scan Cell Tower Info"""
+        return ATCommand("AT+CNETSCAN", 60, "OK")
+
+    @staticmethod
+    def setCellInfoDetails(show: int) -> ATCommand:
+        """Set Cell Tower Info\nShow:1 Hide:0"""
+        return ATCommand(f"AT+CNETSCAN={show}", 3, "OK")
 
     @staticmethod
     def signalQuality() -> ATCommand:
@@ -190,6 +278,11 @@ class Commands(object):
     def bearerStatus() -> ATCommand:
         """Bearer status"""
         return ATCommand("AT+SAPBR=2,1", 30, "OK")
+
+    @staticmethod
+    def GSMLocation() -> ATCommand:
+        """Get GSM Location & Time"""
+        return ATCommand("AT+CLBS=4,1", 45, "OK")
 
     @staticmethod
     def initHTTP() -> ATCommand:
@@ -457,6 +550,50 @@ class SIM800L(object):
 
         return network
 
+    def getServiceProviderName(self) -> str:
+        """Get Service Provider Name"""
+        output = self.execute(Commands.getServiceProviderName())
+        return output.split(":")[1].split(",")[0].replace('"', "").strip()
+
+    def networkRegisterationStatus(self) -> tuple[bool, str, str]:
+        """Check if network is registered"""
+        output = self.execute(Commands.checkNetworkRegistration())
+        code = output.split(",")[1]
+        return (code == "1" or code == "5", code, network_registration[code])
+
+    def getAPN(self) -> str:
+        provider = self.getServiceProviderName().lower()
+        if provider in apn_list:
+            return apn_list[provider]
+        else:
+            raise Exception(f'APN for "{provider}" not found')
+
+    def getCellTowerInfo(self) -> list[CellInfo]:
+        """Get Cell Tower Info"""
+        self.execute(Commands.setCellInfoDetails(1))
+        output: str = self.execute(Commands.scanCellInfo())
+        lines: list[str] = output.split("\n")
+        cells: list[CellInfo] = []
+
+        for line in lines:
+            rawCell: list[str] = line.split(",")
+            if len(rawCell) != 8:
+                continue
+            cells.append(
+                CellInfo(
+                    operator=rawCell[0].split('"')[1],
+                    mcc=int(rawCell[1].split(":")[1]),
+                    mnc=int(rawCell[2].split(":")[1]),
+                    rxlev=int(rawCell[3].split(":")[1]),
+                    cellId=int(rawCell[4].split(":")[1], 16),
+                    afcn=int(rawCell[5].split(":")[1]),
+                    lac=int(rawCell[6].split(":")[1], 16),
+                    bsic=int(rawCell[7].split(":")[1], 16),
+                )
+            )
+
+        return cells
+
     def getSignalStrength(self) -> tuple[float, str]:
         """Get signal strength"""
         output = self.execute(Commands.signalQuality())
@@ -499,6 +636,21 @@ class SIM800L(object):
         if ip_addr == "0.0.0.0":
             return None
         return ip_addr
+
+    def getGsmLocation(self):
+        """Get GSM Location & Time"""
+        output = self.execute(Commands.GSMLocation())
+        pieces = output.split(":", 1)[1].strip().split(",")
+        if len(pieces) != 6:
+            raise Exception(f'Cannot parse "{output}" to get GSM location')
+        return LocationResponse(
+            code=int(pieces[0]),
+            lat=float(pieces[1]),
+            lng=float(pieces[2]),
+            acc=int(pieces[3]),
+            date=pieces[4],
+            time=pieces[5],
+        )
 
     def connectGPRS(self, apn: str, username: str = "", password: str = "") -> str:
         """Connect to GPRS"""
@@ -588,9 +740,9 @@ class SIM800L(object):
         url: str,
         method: str = "GET",
         data: str = "",
-        contentType="application/json",
+        contentType: str = "application/json",
     ) -> Response:
-        """Make HTTP GET or POST request"""
+        """Make HTTP GET or POST request. NOTE: Initiale HTTP before making a request."""
         if not self.HTTPinitialized:
             raise Exception("HTTP service is not initialized")
 
@@ -629,4 +781,4 @@ class SIM800L(object):
 
 
 if __name__ == "__main__":
-    pass
+    print("SIM800L driver\nRun using main.py")
