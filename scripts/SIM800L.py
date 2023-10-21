@@ -516,39 +516,42 @@ class SIM800L(object):
     def scanNetworks(self) -> list[Network]:
         """Scan networks"""
         output = self.execute(Commands.scanOperators())
-
+        print(output)
         networks: list[Network] = []
-        pieces = output.split("(", 1)[1].split(")")
+        raw_networks = output.split(":", 1)[1].strip().split(",,")[0].split(",(")
 
-        for piece in pieces:
-            piece = piece.replace(",(", "")
-            subpieces = piece.split(",")
-            if len(subpieces) != 4:
+        for raw_network in raw_networks:
+            raw_networks = (
+                raw_network.replace('"', "")
+                .replace("(", "")
+                .replace(")", "")
+                .split(",")
+            )
+            if len(raw_networks) != 4:
                 continue
             networks.append(
                 Network(
-                    name=json.loads(subpieces[1]),
-                    shortname=json.loads(subpieces[2]),
-                    id=json.loads(subpieces[3]),
+                    name=raw_networks[1],
+                    shortname=raw_networks[2],
+                    id=raw_networks[3],
                 )
             )
+
         return networks
 
-    def getCurrentNetwork(self) -> str | None:
+    def getCurrentNetwork(self) -> dict | None:
         """Get current network"""
         output = self.execute(Commands.currentOperator())
-        network = output.split(",")[-1]
+        network = output.split(":")[1].strip().split(",")
 
-        if network.startswith('"'):
-            network = network[1:]
-        if network.endswith('"'):
-            network = network[:-1]
-
-        # If after filtering we did not filter anything: there was no network
-        if network.startswith("+COPS"):
+        if len(network) != 3:
             return None
 
-        return network
+        return {
+            "mode": network[0],
+            "format": network[1],
+            "oper": network[2].replace('"', ""),
+        }
 
     def getServiceProviderName(self) -> str:
         """Get Service Provider Name"""
@@ -638,11 +641,13 @@ class SIM800L(object):
         return ip_addr
 
     def getGsmLocation(self):
-        """Get GSM Location & Time"""
+        """Get GSM Location & Time*\nTime is in the format of triangulation server, CST (UTC + 8) by default"""
         output = self.execute(Commands.GSMLocation())
         pieces = output.split(":", 1)[1].strip().split(",")
+
         if len(pieces) != 6:
             raise Exception(f'Cannot parse "{output}" to get GSM location')
+
         return LocationResponse(
             code=int(pieces[0]),
             lat=float(pieces[1]),
@@ -652,8 +657,12 @@ class SIM800L(object):
             time=pieces[5],
         )
 
-    def connectGPRS(self, apn: str, username: str = "", password: str = "") -> str:
-        """Connect to GPRS"""
+    def connectGPRS(self, apn: str = "", username: str = "", password: str = "") -> str:
+        """Connect to GPRS \n If no APN is provided, the APN will be automatically set based on the service provider name"""
+        # If no APN is provided, the APN will be automatically set based on the service provider name
+        if not apn:
+            apn = self.getAPN()
+
         if not self.initialized:
             raise Exception("Modem is not initialized, cannot connect")
 
@@ -673,8 +682,10 @@ class SIM800L(object):
         # Set bearer parameters
         self.execute(Commands.setBearerGPRS())
         self.execute(Commands.setBearerAPN(apn))
-        self.execute(Commands.setBearerUsername(username))
-        self.execute(Commands.setBearerPassword(password))
+        if username:
+            self.execute(Commands.setBearerUsername(username))
+        if password:
+            self.execute(Commands.setBearerPassword(password))
         # Then, open the GPRS connection.
         self.execute(Commands.openBearer())
 

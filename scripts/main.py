@@ -206,7 +206,6 @@ class Tracker(object):
                         RSSI=self.RSSI,
                         lat=gsmLocation.lat,
                         lng=gsmLocation.lng,
-                        time=gsmLocation.time,
                     ),
                 )
 

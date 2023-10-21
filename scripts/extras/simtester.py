@@ -1,7 +1,15 @@
 from SIM800L import SIM800L, ATCommand, Commands
 from machine import UART, Pin
 
-print("SIM800L Tester")
+print(
+    """
+##############################################
+#  SIM800L Micropython Library Test Script   #
+# -----------------------------------------  #
+"""
+)
+
+print("Initializing SIM800L Module...")
 
 simModule = SIM800L(
     uart=UART(
@@ -20,15 +28,18 @@ battChargeStatus, battLevel, battVoltage = simModule.batteryStatus()
 print(f"Battery: {battChargeStatus}, Level: {battLevel}, Voltage: {battVoltage}")
 
 RSSI, BER = simModule.getSignalStrength()
-print(f"RSSI: {RSSI}, BER: {BER}")
+print(f"RSSI: {RSSI}, BER: {BER}\n")
+
+scan = simModule.scanNetworks()
+print(f"Scan: {scan}\n")
+
+currentNetwork = simModule.getCurrentNetwork()
+print(f"Current Network: {currentNetwork}")
 
 network = simModule.getServiceProviderName()
 print(f"Network: {network}")
 
-apn = simModule.getAPN()
-print(f"APN: {apn}")
-
-ip = simModule.connectGPRS(apn=apn)  # Idea
+ip = simModule.connectGPRS()
 print(f"IP: {ip}")
 
 print(simModule.getGsmLocation())

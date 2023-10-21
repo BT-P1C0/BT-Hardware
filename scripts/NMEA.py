@@ -257,4 +257,4 @@ class NMEAparser(object):
 
 
 if __name__ == "__main__":
-    pass
+    print("NMEA parser\nRun using main.py")

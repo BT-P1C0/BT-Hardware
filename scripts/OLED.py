@@ -156,4 +156,4 @@ class SSD1306_SPI(SSD1306):
 
 
 if __name__ == "__main__":
-    pass
+    print("OLED driver\nRun using main.py")
