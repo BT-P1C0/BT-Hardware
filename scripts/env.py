@@ -5,7 +5,7 @@ class pubnub:
 
 class id:
     uuid = "pico-mark-6"
-    busNo = "J"
+    busNo = "H"
 
 
 class env:
@@ -14,4 +14,4 @@ class env:
 
 
 if __name__ == "__main__":
-    pass
+    print("Environment Variables\nRun using main.py")

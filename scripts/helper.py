@@ -63,4 +63,4 @@ def debugPostPayload(
 
 
 if __name__ == "__main__":
-    pass
+    print("Helper Functions\nRun using main.py")

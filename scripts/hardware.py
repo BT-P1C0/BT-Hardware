@@ -50,4 +50,4 @@ class Hardware:
 
 
 if __name__ == "__main__":
-    pass
+    print("Hardware Declarations\nRun using main.py")
