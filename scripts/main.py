@@ -291,11 +291,11 @@ class Tracker(object):
             if data := self.gpsModule.read(1):
                 try:
                     if self.gpsParserObject.update(data.decode("ASCII")):
-                        if self.gpsParserObject.utc_time_time:
+                        if self.gpsParserObject.utc_time:
                             if self.gpsParserObject.lat and self.gpsParserObject.lng:
                                 self.lat = self.gpsParserObject.lat
                                 self.lng = self.gpsParserObject.lng
-                                self.utc_time = self.gpsParserObject.utc_time_time
+                                self.utc_time = self.gpsParserObject.utc_time
                                 self.httpUrl = httpGetUrl(
                                     self.lat,
                                     self.lng,
