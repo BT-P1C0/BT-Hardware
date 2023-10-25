@@ -126,6 +126,8 @@ class Tracker(object):
         self.display(
             "Connecting to internet...",
         )
+        self.checkNetworkRegistered()
+
         retires: int = 1
 
         while retires < 11:

@@ -385,8 +385,9 @@ class SIM800L(object):
                 break
 
         # Check if SIM card is inserted
-        if self.execute(Commands.isSIMInserted()) != "+CSMINS: 0,1":
-            raise Exception("SIM card is not inserted")
+        x = self.execute(Commands.isSIMInserted())
+        if x != "+CSMINS: 0,1":
+            raise Exception(f"SIM card is not inserted, Module Response: {x}")
 
         # Set initialized flag and support vars
         self.initialized = True
