@@ -39,7 +39,10 @@ print(f"Current Network: {currentNetwork}")
 network = simModule.getServiceProviderName()
 print(f"Network: {network}")
 
+
 ip = simModule.connectGPRS()
 print(f"IP: {ip}")
 
-print(simModule.getGsmLocation())
+print("Gsm loc:", simModule.getGsmLocation())
+
+print("\n", simModule.getCellTowerInfo(), "\n")

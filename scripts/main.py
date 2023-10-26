@@ -117,30 +117,31 @@ class Tracker(object):
 
     def checkNetworkRegistered(self) -> None:
         while x := self.simModule.networkRegisterationStatus():
-            self.display(x[2])
+            # self.display(x[2])
             if x[0] == True:
                 return
             time.sleep(1)
 
     def connectToInternet(self) -> None:
+        """Initialize GPRS Connection for Internet"""
         self.display(
             "Connecting to internet...",
         )
         self.checkNetworkRegistered()
 
-        retires: int = 1
+        tires: int = 1
 
-        while retires < 11:
+        while tires < 11:
             try:
-                ip = self.simModule.connectGPRS(apn="airtelgprs.net")
+                ip = self.simModule.connectGPRS()
                 self.getSignalStrength()
                 self.display(f"IP: {ip}\nRSSI: {self.RSSI}%")
                 print(f"BER: {self.BER}")
                 return
 
             except Exception as e:
-                retires += 1
-                self.display(f"\nConnection failed\ntry: {retires}/10")
+                tires += 1
+                self.display(f"\nConnection failed\ntry: {tires}/10")
                 print(f"Internet Connection Exception: {e}")
                 time.sleep(1)
 
@@ -187,7 +188,7 @@ class Tracker(object):
         except Exception as e:
             print("Display exception", e)
 
-    def onlineDebugMessage(self, retry: bool = True) -> None:
+    def onlineDebugMessage(self, status: str, retry: bool = True) -> None:
         gsmLocation = self.simModule.getGsmLocation()
         failedRequests = 0
 
@@ -196,7 +197,7 @@ class Tracker(object):
                 self.hardReset()
             try:
                 url = debugPostUrl()
-                self.display(f"\nSending Debug Message")
+                self.display(f"\nSending Debug\nMessage")
                 print("Url =", url)
                 self.picoLed.value(1)
 
@@ -204,7 +205,7 @@ class Tracker(object):
                     method="POST",
                     url=url,
                     data=debugPostPayload(
-                        status="online",
+                        status=status,
                         RSSI=self.RSSI,
                         lat=gsmLocation.lat,
                         lng=gsmLocation.lng,
@@ -272,7 +273,7 @@ class Tracker(object):
 
                     else:
                         self.getSignalStrength()
-                        self.onlineDebugMessage(retry=False)
+                        self.onlineDebugMessage(status="online", retry=False)
 
             except Exception as e:
                 failedRequests += 1
@@ -314,13 +315,13 @@ class Tracker(object):
         """
         Starts the tracker by initializing http connection and starting the threads
         """
-        # Connect to internet
+        # Connect to internet / Initialize GPRS Connection
         self.connectToInternet()
-        self.display("Initialising HTTP connection")
+        self.display("Initialising HTTP connection ...")
         self.simModule.initHTTP()
-        self.display("Initialised HTTP connection")
+        self.display("Initialised\nconnection")
 
-        self.onlineDebugMessage(retry=False)
+        self.onlineDebugMessage("boot", retry=True)
 
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())

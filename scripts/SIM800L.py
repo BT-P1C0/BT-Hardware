@@ -4,7 +4,7 @@ SIM800L Driver for MicroPython 1.20 on Raspberry Pi Pico
 sources: https://github.com/pythings/Drivers/blob/master/SIM800L.py
 """
 
-import time, json
+import time
 from machine import Pin, UART
 
 
@@ -150,7 +150,7 @@ class Network(object):
 class CellInfo(object):
     def __init__(
         self,
-        operator: str,
+        oper: str,
         mcc: int,
         mnc: int,
         rxlev: int,
@@ -159,7 +159,7 @@ class CellInfo(object):
         lac: int,
         bsic: int,
     ):
-        self.operator: str = operator
+        self.oper: str = oper
         self.mcc: int = mcc
         self.mnc: int = mnc
         self.lac: int = lac
@@ -169,7 +169,7 @@ class CellInfo(object):
         self.afcn: int = afcn
 
     def __str__(self):
-        return f"CellInfo(Operator: {self.operator}, MCC: {self.mcc}, MNC: {self.mnc}, LAC: {self.lac}, CellId: {self.cellId}, BSIC: {self.bsic}, RXLEV: {self.rxlev}, AFCN: {self.afcn})"
+        return f"CellInfo(Operator: {self.oper}, MCC: {self.mcc}, MNC: {self.mnc}, LAC: {self.lac}, CellId: {self.cellId}, BSIC: {self.bsic}, RXLEV: {self.rxlev}, AFCN: {self.afcn})"
 
     def __repr__(self):
         return self.__str__()
@@ -517,7 +517,6 @@ class SIM800L(object):
     def scanNetworks(self) -> list[Network]:
         """Scan networks"""
         output = self.execute(Commands.scanOperators())
-        print(output)
         networks: list[Network] = []
         raw_networks = output.split(":", 1)[1].strip().split(",,")[0].split(",(")
 
@@ -585,7 +584,7 @@ class SIM800L(object):
                 continue
             cells.append(
                 CellInfo(
-                    operator=rawCell[0].split('"')[1],
+                    oper=rawCell[0].split('"')[1],
                     mcc=int(rawCell[1].split(":")[1]),
                     mnc=int(rawCell[2].split(":")[1]),
                     rxlev=int(rawCell[3].split(":")[1]),
