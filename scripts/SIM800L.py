@@ -650,8 +650,8 @@ class SIM800L(object):
 
         return LocationResponse(
             code=int(pieces[0]),
-            lat=float(pieces[1]),
-            lng=float(pieces[2]),
+            lat=float(pieces[2]),
+            lng=float(pieces[1]),
             acc=int(pieces[3]),
             date=pieces[4],
             time=pieces[5],
