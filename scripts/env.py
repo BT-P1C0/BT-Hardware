@@ -1,16 +1,22 @@
-class pubnub:
-    pk = "pub-c-448b0aed-e6f8-4536-a1e4-f235af33663b"
-    sk = "sub-c-10e0e350-30c8-4f8c-84dc-659f6954424e"
-
-
-class id:
-    uuid = "pico-mark-6"
-    busNo = "J"
+from mqtt import create_connect_packet
 
 
 class env:
-    pubnub = pubnub()
-    id = id()
+    bus: str = "c"
+    id: str = "bus_" + bus
+    mqtt_topic: str = "bus/" + bus
+    mqtt_server: str = "test.mosquitto.org"
+    mqtt_port: int = 1883
+    mqtt_user: str = "user"
+    mqtt_pass: str = "pass"
+    mqtt_keep_alive: int = 60
+
+    connection_payload: bytes = None
+
+    def __init__(self):
+        self.connection_payload = (
+            create_connect_packet(self.id, self.mqtt_keep_alive) + b"\x1A"
+        )
 
 
 if __name__ == "__main__":

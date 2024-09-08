@@ -1,16 +1,16 @@
 {
     "python.languageServer": "Pylance",
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "off",
     "python.analysis.diagnosticSeverityOverrides": {
         "reportMissingModuleSource": "none"
     },
     "micropico.syncFolder": "",
     "micropico.openOnStart": true,
     "python.analysis.typeshedPaths": [
-        ".vscode\\Pico-W-Stub"
+        "~/.micropico-stubs/included"
     ],
     "python.analysis.extraPaths": [
-        ".vscode\\Pico-W-Stub"
+        "~/.micropico-stubs/included"
     ],
     "python.linting.enabled": true,
     "python.analysis.autoImportCompletions": true

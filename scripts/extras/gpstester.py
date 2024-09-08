@@ -1,15 +1,17 @@
 from NMEA import NMEAparser
-from machine import Pin, UART
+from hardware import Hardware
 
-gpsModule = UART(
-    1,  # 1
-    baudrate=9600,  # 9600
-    tx=Pin(8),  # 4
-    rx=Pin(9),  # 5
+print(
+    """
+##############################################
+#  NEO6M Micropython Library Test Script     #
+# -----------------------------------------  #
+"""
 )
 
-gpsParserObject = NMEAparser()
+gpsModule = Hardware.gps()
 
+gpsParserObject = NMEAparser()
 
 while True:
     if gpsModule.any():

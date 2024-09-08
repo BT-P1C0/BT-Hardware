@@ -1,7 +1,9 @@
+import re
+from env import env
+from mqtt import create_publish_packet
 import time
-from machine import Pin, UART, I2C, reset
+from machine import Pin, UART, reset
 from NMEA import NMEAparser
-from helper import *
 from OLED import SSD1306_I2C
 import _thread
 from hardware import Hardware
@@ -19,12 +21,15 @@ class Tracker(object):
     gpsModule: UART
     gpsParserObject: NMEAparser
     lastDisplayedText: str = ""
-    httpUrl: str = ""
     lat, lng, utc_time = 0, 0, 0
     RISSI, BER = 0, 0
 
+    # Threading and locks
+    sharedData: str = ""
+    sharedDataLock = _thread.allocate_lock()
+
     def __init__(self) -> None:
-        self.env = env
+        self.env = env()
 
         self.__connectLED()
         self.__connectOLED()
@@ -188,99 +193,125 @@ class Tracker(object):
         except Exception as e:
             print("Display exception", e)
 
-    def onlineDebugMessage(self, status: str, retry: bool = True) -> None:
-        gsmLocation = self.simModule.getGsmLocation()
-        failedRequests = 0
+    # def onlineDebugMessage(self, status: str, retry: bool = True) -> None:
+    #     gsmLocation = self.simModule.getGsmLocation()
+    #     failedRequests = 0
 
-        while True:
-            if failedRequests > 10:
-                self.hardReset()
+    #     while True:
+    #         if failedRequests > 10:
+    #             self.hardReset()
+    #         try:
+    #             url = debugPostUrl()
+    #             self.display(f"\nSending Debug\nMessage")
+    #             print("Url =", url)
+    #             self.picoLed.value(1)
+
+    #             response = self.simModule.makeHTTPRequest(
+    #                 method="POST",
+    #                 url=url,
+    #                 data=debugPostPayload(
+    #                     status=status,
+    #                     RSSI=self.RSSI,
+    #                     lat=gsmLocation.lat,
+    #                     lng=gsmLocation.lng,
+    #                 ),
+    #             )
+
+    #             self.picoLed.value(0)
+
+    #             print(response.status_code, ":", response.status)
+    #             print("Response: ", response.content)
+
+    #             if response.status_code == 200:
+    #                 self.display(f"Device Online")
+    #                 break
+    #             else:
+    #                 self.display(
+    #                     f"Sending error\nStatus Code: {response.status_code}\n"
+    #                 )
+    #                 failedRequests += 1
+    #         except Exception as e:
+    #             failedRequests += 1
+    #             self.display("Networking Exception")
+    #             print(e)
+    #         if not retry:
+    #             break
+
+    def connectMqttServer(self) -> None:
+        print("Reconnecting to MQTT Server")
+        try:
+            self.simModule.close_tcp()
+        except Exception:
+            pass
+
+        retries = 0
+
+        while retries < 10:
             try:
-                url = debugPostUrl()
-                self.display(f"\nSending Debug\nMessage")
-                print("Url =", url)
-                self.picoLed.value(1)
-
-                response = self.simModule.makeHTTPRequest(
-                    method="POST",
-                    url=url,
-                    data=debugPostPayload(
-                        status=status,
-                        RSSI=self.RSSI,
-                        lat=gsmLocation.lat,
-                        lng=gsmLocation.lng,
-                    ),
+                self.simModule.init_tcp(
+                    domain=self.env.mqtt_server,
+                    port=self.env.mqtt_port,
                 )
-
-                self.picoLed.value(0)
-
-                print(response.status_code, ":", response.status)
-                print("Response: ", response.content)
-
-                if response.status_code == 200:
-                    self.display(f"Device Online")
-                    break
-                else:
-                    self.display(
-                        f"Sending error\nStatus Code: {response.status_code}\n"
-                    )
-                    failedRequests += 1
+                self.simModule.send_tcp_data(self.env.connection_payload)
             except Exception as e:
-                failedRequests += 1
-                self.display("Networking Exception")
-                print(e)
-            if not retry:
-                break
+                print("Mqtt Server Connection Exception", e)
+                retries += 1
+            else:
+                return
+
+        print("Too many failed retries, resetting...")
+        self.hardReset()
+
+    def makeMqttRequest(self, data: str) -> None:
+        payload = (
+            create_publish_packet(
+                topic=self.env.mqtt_topic,
+                message=data,
+                retain=True,
+            )
+            + b"\x1A"
+        )
+        self.simModule.send_tcp_data(payload)
 
     # Networking Thread
     def networkingThread(self) -> None:
         """
         Networking Thread that handels network requests
         """
-
-        currRequestUrl: str = ""
-        lastRequestUrl: str = ""
+        self.connectMqttServer()
+        currentData: str = ""
+        lastData: str = ""
 
         failedRequests: int = 0
 
         while failedRequests < 10:
-            try:
-                if self.httpUrl:
-                    currRequestUrl = self.httpUrl
 
-                    if currRequestUrl != lastRequestUrl:
-                        self.display(f"\nSending Location")
-                        print("Url =", currRequestUrl)
-                        self.picoLed.value(1)
-                        t1: int = time.ticks_ms()
-                        response = self.simModule.makeHTTPRequest(
-                            method="GET",
-                            url=currRequestUrl,
-                        )
-                        t2: int = time.ticks_ms()
-                        self.picoLed.value(0)
-                        self.display(
-                            f"Status Code: {response.status_code}\nTime Delta:\n{time.ticks_diff(t1,t2)/1000} s"
-                        )
-                        print(response.status_code, ":", response.status)
-                        print("Response:", response.content)
+            self.sharedDataLock.acquire()
+            currentData = self.sharedData
+            self.sharedDataLock.release()
 
-                        if response.status_code == 200:
-                            failedRequests = 0
-                            lastRequestUrl = currRequestUrl
-                        else:
-                            failedRequests += 1
+            if currentData and currentData != lastData:
+                self.display(f"\nSending Location")
+                print("Data =", currentData)
 
-                    else:
-                        self.getSignalStrength()
-                        self.onlineDebugMessage(status="online", retry=False)
+                self.picoLed.value(1)
+                t1: int = time.ticks_ms()
 
-            except Exception as e:
-                failedRequests += 1
-                self.display("Networking Exception")
-                print(e)
+                try:
+                    self.makeMqttRequest(currentData)
+                except Exception as e:
+                    self.display("Mqtt Exception")
+                    print(e)
+                    self.connectMqttServer()
+                    failedRequests += 1
+                else:
+                    t2: int = time.ticks_ms()
+                    self.picoLed.value(0)
+                    self.display(f"Time Delta:\n{time.ticks_diff(t2,t1)/1000} s")
+                    lastData = currentData
+                    failedRequests = 0
 
-        print("Too many filed requests, resetting...")
+        print("Too many failed requests, resetting...")
         self.hardReset()
 
     # GPS Thread
@@ -288,6 +319,8 @@ class Tracker(object):
         """
         GPS Thread that handels reading and parsing GPS data
         """
+        lastDataString: str = ""
+        dataString: str = ""
 
         while self.gpsModule:
             if data := self.gpsModule.read(1):
@@ -295,13 +328,12 @@ class Tracker(object):
                     if self.gpsParserObject.update(data.decode("ASCII")):
                         if self.gpsParserObject.utc_time:
                             if self.gpsParserObject.lat and self.gpsParserObject.lng:
-                                self.lat = self.gpsParserObject.lat
-                                self.lng = self.gpsParserObject.lng
-                                self.utc_time = self.gpsParserObject.utc_time
-                                self.httpUrl = httpGetUrl(
-                                    self.lat,
-                                    self.lng,
-                                    self.utc_time,
+                                dataString = (
+                                    str(self.gpsParserObject.lat)
+                                    + ","
+                                    + str(self.gpsParserObject.lng)
+                                    + ","
+                                    + str(self.gpsParserObject.utc_time)
                                 )
                             else:
                                 self.display("GPS: No Location Fix")
@@ -311,17 +343,24 @@ class Tracker(object):
                 except Exception as e:
                     print("GPS Exception", e)
 
+            if dataString and dataString != lastDataString:
+                self.sharedDataLock.acquire()
+                self.sharedData = dataString
+                self.sharedDataLock.release()
+                lastDataString = dataString
+
     def start(self) -> None:
         """
         Starts the tracker by initializing http connection and starting the threads
         """
         # Connect to internet / Initialize GPRS Connection
         self.connectToInternet()
-        self.display("Initialising HTTP connection ...")
-        self.simModule.initHTTP()
-        self.display("Initialised\nconnection")
 
-        self.onlineDebugMessage("boot", retry=True)
+        # self.display("Initialising HTTP connection ...")
+        # self.simModule.initHTTP()
+        # self.display("Initialised\nconnection")
+
+        # self.onlineDebugMessage("boot", retry=True)
 
         self.display("Starting Main Loop")
         _thread.start_new_thread(self.networkingThread, ())

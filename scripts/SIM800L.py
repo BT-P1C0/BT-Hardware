@@ -122,8 +122,11 @@ class Response(object):
 
 
 class ATCommand(object):
-    def __init__(self, string: str, timeout: int, end: str) -> None:
+    def __init__(
+        self, string: str, timeout: int, end: str, raw_bytes: bytes | None = None
+    ) -> None:
         self.string: str = string
+        self.raw_bytes: bytes = raw_bytes or bytes(string + "\r\n", "utf-8")
         self.timeout: int = timeout
         self.end: str = end
 
@@ -344,6 +347,26 @@ class Commands(object):
         """Set SSL"""
         return ATCommand(f"AT+HTTPSSL={ssl}", 3, "OK")
 
+    @staticmethod
+    def connectTcp(domain: str, port: int) -> ATCommand:
+        """Connect TCP"""
+        return ATCommand(f'AT+CIPSTART="TCP","{domain}",{port}', 30, "CONNECT OK")
+
+    @staticmethod
+    def closeTcp() -> ATCommand:
+        """Close TCP"""
+        return ATCommand("AT+CIPCLOSE", 3, "CLOSE OK")
+
+    @staticmethod
+    def sendTcpSendHeader() -> ATCommand:
+        """Send TCP Data"""
+        return ATCommand(f"AT+CIPSEND", 3, "> ")
+
+    @staticmethod
+    def sendTcpDataBytes(data: bytes) -> ATCommand:
+        """Send TCP Data"""
+        return ATCommand(":RAW:", 5, "SEND OK", data)
+
 
 class SIM800L(object):
     """Modem class. Handles all the AT commands and responses."""
@@ -353,6 +376,7 @@ class SIM800L(object):
         uart: UART,
         reset_pin: Pin | None = None,
         showErrors: bool = False,
+        debugMode: bool = False,
     ) -> None:
         # Initialize UART
         self.uart: UART = uart
@@ -368,6 +392,7 @@ class SIM800L(object):
         self.ipAddr: str | None = None
         self.GPRSinitialized: bool = False
         self.HTTPinitialized: bool = False
+        self.debugMode: bool = debugMode
 
     def initialize(self) -> bool:
         retries = 0
@@ -386,7 +411,7 @@ class SIM800L(object):
 
         # Check if SIM card is inserted
         x = self.execute(Commands.isSIMInserted())
-        if x != "+CSMINS: 0,1":
+        if "+CSMINS: 0,1" not in x:
             raise Exception(f"SIM card is not inserted, Module Response: {x}")
 
         # Set initialized flag and support vars
@@ -405,7 +430,10 @@ class SIM800L(object):
 
     def execute(self, command: ATCommand, clean_output: bool = True) -> str:
         # Execute the AT command
-        self.uart.write(bytes(command.string + "\r\n", "utf-8"))
+        if self.debugMode:
+            print(f"SIM Module: Executing: {command.raw_bytes}")
+
+        self.uart.write(command.raw_bytes)
 
         # Support vars
         pre_end: bool = True
@@ -424,8 +452,11 @@ class SIM800L(object):
                         f'Timeout for command "{command.string}" (timeout={command.timeout})'
                     )
             else:
+                if self.debugMode:
+                    print(f"SIM Module: Received: {line}")
+
                 # Convert line to string
-                line_str: str = str(line, "UTF-8")
+                line_str: str = str(line, "UTF-8")  # type: ignore
 
                 # Do we have an error?
                 if line_str == "ERROR\r\n":
@@ -437,7 +468,7 @@ class SIM800L(object):
                     )
 
                 # If we had a pre-end, do we have the expected end?
-                if line_str == f"{command.end}\r\n":
+                if command.end in line_str:
                     break
                 if pre_end and line_str.startswith(command.end):
                     output += line_str
@@ -789,6 +820,19 @@ class SIM800L(object):
         if not self.sslSupported:
             raise Exception("SSL is not supported by this modem")
         self.execute(Commands.setSSL(0))
+
+    def init_tcp(self, domain: str, port: int):
+        """Initialize TCP connection"""
+        self.execute(Commands.connectTcp(domain, port))
+
+    def close_tcp(self) -> None:
+        """Close TCP connection"""
+        self.execute(Commands.closeTcp())
+
+    def send_tcp_data(self, data: bytes) -> None:
+        """Send TCP data"""
+        self.execute(Commands.sendTcpSendHeader())
+        self.execute(Commands.sendTcpDataBytes(data))
 
 
 if __name__ == "__main__":
